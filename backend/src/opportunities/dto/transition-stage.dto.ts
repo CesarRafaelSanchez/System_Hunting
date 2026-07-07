@@ -1,0 +1,24 @@
+import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
+
+export class TransitionStageDto {
+  @IsNumber()
+  @IsNotEmpty()
+  toStagePosition: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isValidatedByBO?: boolean;
+
+  @IsString()
+  @IsOptional()
+  reason?: string;
+
+  @IsOptional()
+  form2Data?: any;
+
+  @IsOptional()
+  form3Data?: any;
+
+  @IsOptional()
+  towersData?: any[];
+}

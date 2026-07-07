@@ -1,0 +1,173 @@
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { useFormStore } from '../../store/useFormStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { LIMA_DISTRITOS } from '../../utils/constants';
+import { addToSyncQueue } from '../../utils/indexedDB';
+import styles from './FormWizard.module.css';
+
+export const Form1Registro: React.FC = () => {
+  const [step, setStep] = useState(1);
+  const { saveDraft, getDraft, clearDraft } = useFormStore();
+  const { user } = useAuthStore();
+  const [hunters, setHunters] = useState<any[]>([]);
+  
+  const [formData, setFormData] = useState({
+    ejecutivo: user?.id || '',
+    nombreEdificio: '',
+    direccion: '',
+    distrito: '',
+    numeroHPs: '',
+    resultadoVisita: '',
+    detalle: '',
+    coordenadas: ''
+  });
+
+  useEffect(() => {
+    // Fetch hunters list
+    const fetchHunters = async () => {
+      try {
+        const { fetchApi } = await import('../../services/api.client');
+        const res = await fetchApi<any[]>('/users?role=HUNTER'); // Dummy endpoint or real one if exists
+        setHunters(res);
+      } catch (e) {
+        console.warn("Could not fetch hunters, falling back to current user.");
+        if (user) setHunters([user]);
+      }
+    };
+    fetchHunters();
+
+    const draft = getDraft('form1');
+    if (draft) setFormData(draft);
+  }, [getDraft, user]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const newFormData = { ...formData, [e.target.name]: e.target.value };
+    setFormData(newFormData);
+    saveDraft('form1', newFormData);
+  };
+
+  const captureLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const coords = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+        handleChange({ target: { name: 'coordenadas', value: coords } } as any);
+      }, (err) => {
+        toast.error('Error capturando ubicación: ' + err.message);
+      });
+    } else {
+      toast.error('Geolocalización no soportada por el navegador.');
+    }
+  };
+
+  const nextStep = () => setStep(s => s + 1);
+  const prevStep = () => setStep(s => s - 1);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { prediosService } = await import('../../services/predios.service');
+      await prediosService.createPredio(formData as any);
+      toast.success('Predio registrado correctamente');
+      clearDraft('form1');
+      setStep(1);
+      setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '', coordenadas: '' });
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.message.includes('NetworkError') || !navigator.onLine) {
+        await addToSyncQueue('/predios', 'POST', formData);
+        toast.warning('Sin conexión. Los datos se guardaron localmente y se enviarán automáticamente al recuperar la señal.');
+        clearDraft('form1');
+        setStep(1);
+        setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '', coordenadas: '' });
+      } else {
+        toast.error('Error al registrar predio: ' + error.message);
+      }
+    }
+  };
+
+  return (
+    <div className={styles.wizardContainer}>
+      <h2>1. Registro de Predio (Génesis)</h2>
+      <div className={styles.stepper}>
+        <div className={`${styles.step} ${step >= 1 ? styles.active : ''} ${step > 1 ? styles.completed : ''}`}>1</div>
+        <div className={`${styles.step} ${step >= 2 ? styles.active : ''} ${step > 2 ? styles.completed : ''}`}>2</div>
+        <div className={`${styles.step} ${step >= 3 ? styles.active : ''} ${step > 3 ? styles.completed : ''}`}>3</div>
+      </div>
+
+      <form onSubmit={step === 3 ? handleSubmit : (e) => { e.preventDefault(); nextStep(); }}>
+        {step === 1 && (
+          <div>
+            <h3 className={styles.stepTitle}>Datos Básicos</h3>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Ejecutivo *</label>
+              <select name="ejecutivo" value={formData.ejecutivo} onChange={handleChange} className={styles.select} required>
+                <option value="">Seleccione Hunter...</option>
+                {hunters.map(h => (
+                  <option key={h.id} value={h.id}>{h.nombre || h.email}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Nombre del edificio *</label>
+              <input name="nombreEdificio" value={formData.nombreEdificio} onChange={handleChange} className={styles.input} required />
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <h3 className={styles.stepTitle}>Ubicación</h3>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Dirección *</label>
+              <input name="direccion" value={formData.direccion} onChange={handleChange} className={styles.input} required />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Distrito *</label>
+              <select name="distrito" value={formData.distrito} onChange={handleChange} className={styles.select} required>
+                <option value="">Seleccione Distrito...</option>
+                {LIMA_DISTRITOS.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Número de HPs *</label>
+              <input type="number" name="numeroHPs" value={formData.numeroHPs} onChange={handleChange} className={styles.input} required min="1" />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Coordenadas Geográficas *</label>
+              <div style={{display:'flex', gap:'10px'}}>
+                <input name="coordenadas" value={formData.coordenadas} onChange={handleChange} className={styles.input} required placeholder="Ej: -12.0397, -77.0372" />
+                <button type="button" onClick={captureLocation} className={`${styles.button} ${styles.btnBack}`} style={{margin:0, width:'auto', padding:'0 15px'}}>📍 GPS</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <h3 className={styles.stepTitle}>Resultado</h3>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Resultado de visita *</label>
+              <select name="resultadoVisita" value={formData.resultadoVisita} onChange={handleChange} className={styles.select} required>
+                <option value="">Seleccione...</option>
+                <option value="VISITA EFECTIVA (HUBO ATENCION POR PARTE DEL PREDIO)">VISITA EFECTIVA (HUBO ATENCION POR PARTE DEL PREDIO)</option>
+                <option value="VISITA NO EFECTIVA (NO HUBO ATENCION / NO TRABAJABLE)">VISITA NO EFECTIVA (NO HUBO ATENCION / NO TRABAJABLE)</option>
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Detalle de la Visita (Qué Sucedió) *</label>
+              <textarea name="detalle" value={formData.detalle} onChange={handleChange} className={styles.textarea} required />
+            </div>
+          </div>
+        )}
+
+        <div className={styles.buttonGroup}>
+          {step > 1 && <button type="button" onClick={prevStep} className={`${styles.button} ${styles.btnBack}`}>Atrás</button>}
+          {step < 3 && <button type="submit" className={`${styles.button} ${styles.btnNext}`}>Siguiente</button>}
+          {step === 3 && <button type="submit" className={`${styles.button} ${styles.btnSubmit}`}>Registrar Predio</button>}
+        </div>
+      </form>
+    </div>
+  );
+};
