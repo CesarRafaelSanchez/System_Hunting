@@ -1,51 +1,65 @@
-import { IsNotEmpty, IsString, IsOptional, IsDateString, IsNumber, ValidateNested, IsArray } from 'class-validator';
-import { Type } from 'class-transformer';
-import { TorreDto } from './torre.dto';
+import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
 
 export class CreatePredioDto {
-  @IsString()
-  @IsNotEmpty()
-  nombreProyecto: string;
+  // ── Campos del formulario de Registro de Predio (Génesis) ──────────────────
+  // Estos son los campos que envía el formulario frontend del Hunter.
 
   @IsString()
   @IsNotEmpty()
-  tipoDesarrollo: string;
+  nombreEdificio: string; // Nombre del edificio / proyecto
 
   @IsString()
   @IsNotEmpty()
-  origenProspeccion: string;
+  direccion: string; // Dirección / nombre de vía
 
   @IsString()
   @IsNotEmpty()
-  clasificacionProyecto: string;
+  distrito: string; // Nombre del distrito (el backend resuelve el UUID)
 
   @IsString()
-  @IsNotEmpty()
-  estadoConstruccion: string;
-
-  @IsDateString()
   @IsOptional()
-  fechaEntrega?: string;
+  numeroHPs?: string; // Número de hogares pasantes
 
   @IsString()
-  @IsNotEmpty()
-  juntaDirectiva: string;
+  @IsOptional()
+  resultadoVisita?: string; // Resultado de la visita
 
   @IsString()
-  @IsNotEmpty()
-  distritoId: string;
+  @IsOptional()
+  detalle?: string; // Detalle de la visita
 
   @IsString()
-  @IsNotEmpty()
-  tipoVia: string;
+  @IsOptional()
+  coordenadas?: string; // Coordenadas GPS "lat, lng"
+
+  // ── Campos avanzados opcionales (usados en fases posteriores) ─────────────
+  @IsString()
+  @IsOptional()
+  tipoDesarrollo?: string;
 
   @IsString()
-  @IsNotEmpty()
-  nombreVia: string;
+  @IsOptional()
+  origenProspeccion?: string;
 
   @IsString()
-  @IsNotEmpty()
-  numeracionMunicipal: string;
+  @IsOptional()
+  clasificacionProyecto?: string;
+
+  @IsString()
+  @IsOptional()
+  estadoConstruccion?: string;
+
+  @IsString()
+  @IsOptional()
+  juntaDirectiva?: string;
+
+  @IsString()
+  @IsOptional()
+  tipoVia?: string;
+
+  @IsString()
+  @IsOptional()
+  numeracionMunicipal?: string;
 
   @IsNumber()
   @IsOptional()
@@ -55,8 +69,11 @@ export class CreatePredioDto {
   @IsOptional()
   longitude?: number;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => TorreDto)
-  torresEstructura: TorreDto[];
+  // ── Campos usados por UpdatePredioDto (fases avanzadas del formulario) ──────
+  @IsString()
+  @IsOptional()
+  fechaEntrega?: string;
+
+  @IsOptional()
+  torresEstructura?: any[];
 }

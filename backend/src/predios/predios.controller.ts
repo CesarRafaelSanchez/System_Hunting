@@ -19,7 +19,8 @@ export class PrediosController {
     try {
       return await this.prediosService.createPredio(req.user, createPredioDto, manager);
     } catch (error) {
-      return { status: 'error', message: error.message, stack: error.stack };
+      console.error('[PrediosController] Error al crear predio:', error.message, error.stack);
+      throw error; // Re-lanzar para que NestJS devuelva el HTTP correcto (400/500)
     }
   }
 

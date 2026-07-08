@@ -9,6 +9,9 @@ import { Piso } from '../database/entities/piso.entity';
 import { Contact } from '../database/entities/contact.entity';
 import { PropertyContact } from '../database/entities/property-contact.entity';
 import { Opportunity } from '../database/entities/opportunity.entity';
+import { Distrito } from '../database/entities/distrito.entity';
+import { PipelineStage } from '../database/entities/pipeline-stage.entity';
+import { Pipeline } from '../database/entities/pipeline.entity';
 
 @Injectable()
 export class PrediosService {
@@ -35,64 +38,68 @@ export class PrediosService {
   }
 
   async createPredio(user: any, dto: CreatePredioDto, manager: EntityManager) {
-    let totalHogaresGlobal = 0;
-    const totalTorres = dto.torresEstructura?.length || 1;
+    // ── 1. Resolver el UUID del distrito desde su nombre ──────────────────────
+    const distritoNombre = dto.distrito?.trim();
+    if (!distritoNombre) {
+      throw new BadRequestException('El campo distrito es requerido.');
+    }
+    let distrito = await manager.findOne(Distrito, { where: { nombre: distritoNombre } });
+    if (!distrito) {
+      // Si no existe aún en la BD, lo creamos dinámicamente
+      distrito = manager.create(Distrito, { nombre: distritoNombre });
+      await manager.save(distrito);
+    }
 
-    // Crear la entidad principal
+    // ── 2. Resolver Pipeline y Etapa Inicial real desde la BD ─────────────────
+    const pipeline = await manager.findOne(Pipeline, { where: { isActive: true } });
+    if (!pipeline) {
+      throw new BadRequestException('No existe un pipeline configurado.');
+    }
+    const initialStage = await manager.findOne(PipelineStage, {
+      where: { pipelineId: pipeline.id, isInitial: true }
+    });
+    if (!initialStage) {
+      throw new BadRequestException('El pipeline no tiene una etapa inicial configurada.');
+    }
+
+    // ── 3. Crear el Predio mapeando campos del formulario ─────────────────────
+    const totalHPs = parseInt(dto.numeroHPs as string, 10) || 0;
     const predio = manager.create(Predio, {
       companyId: user.companyId,
-      nombreProyecto: dto.nombreProyecto,
-      tipoDesarrollo: dto.tipoDesarrollo,
-      origenProspeccion: dto.origenProspeccion,
-      clasificacionProyecto: dto.clasificacionProyecto,
-      estadoConstruccion: dto.estadoConstruccion,
-      fechaEntrega: dto.fechaEntrega ? new Date(dto.fechaEntrega) : undefined,
-      juntaDirectiva: dto.juntaDirectiva,
-      distritoId: dto.distritoId,
-      tipoVia: dto.tipoVia,
-      nombreVia: dto.nombreVia,
-      numeracionMunicipal: dto.numeracionMunicipal,
-      totalTorres: totalTorres,
+      nombreProyecto: dto.nombreEdificio,          // nombreEdificio → nombreProyecto
+      tipoDesarrollo: dto.tipoDesarrollo || 'MULTIFAMILIAR',
+      origenProspeccion: dto.origenProspeccion || 'TERRENO',
+      clasificacionProyecto: dto.clasificacionProyecto || 'PRIMARIO',
+      estadoConstruccion: dto.estadoConstruccion || 'EN_CONSTRUCCION',
+      juntaDirectiva: dto.juntaDirectiva || 'NO',
+      distritoId: distrito.id,
+      tipoVia: dto.tipoVia || 'AV.',
+      nombreVia: dto.direccion,                    // direccion → nombreVia
+      numeracionMunicipal: dto.numeracionMunicipal || 'S/N',
+      totalTorres: 1,
+      totalHogares: totalHPs,
       hunterPrincipalId: user.id
     });
 
-    if (dto.latitude && dto.longitude) {
-      predio.coordenadasGps = `(${dto.longitude},${dto.latitude})`;
+    // Coordenadas opcionales: "lat, lng" → point(lon, lat)
+    if (dto.coordenadas) {
+      const parts = dto.coordenadas.split(',').map(s => parseFloat(s.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        predio.coordenadasGps = `(${parts[1]},${parts[0]})`;
+      }
     }
 
     const savedPredio = await manager.save(predio);
 
-    // Iterar y crear infraestructura relacional (Torres y Pisos)
-    if (dto.torresEstructura && dto.torresEstructura.length > 0) {
-      for (let i = 0; i < dto.torresEstructura.length; i++) {
-        const torreDto = dto.torresEstructura[i];
-        
-        const torre = manager.create(Torre, {
-          predioId: savedPredio.id,
-          nombreTorre: torreDto.nombreTorre || `Torre ${i + 1}`
-        });
-        
-        const savedTorre = await manager.save(torre);
-        const hogaresArray = this.parseHogaresPorPiso(torreDto.hogaresPorPiso, torreDto.totalPisos);
-
-        for (let p = 0; p < torreDto.totalPisos; p++) {
-          const hogares = hogaresArray[p] || 0;
-          const piso = manager.create(Piso, {
-            torreId: savedTorre.id,
-            numeroPiso: p + 1,
-            hogaresCantidad: hogares
-          });
-          await manager.save(piso);
-          totalHogaresGlobal += hogares;
-        }
-      }
+    // ── 4. Torre por defecto con el número de HPs ─────────────────────────────
+    if (totalHPs > 0) {
+      const torre = manager.create(Torre, { predioId: savedPredio.id, nombreTorre: 'Torre 1' });
+      const savedTorre = await manager.save(torre);
+      const piso = manager.create(Piso, { torreId: savedTorre.id, numeroPiso: 1, hogaresCantidad: totalHPs });
+      await manager.save(piso);
     }
 
-    // Actualizar el total de hogares en el predio
-    savedPredio.totalHogares = totalHogaresGlobal;
-    await manager.save(savedPredio);
-
-    // Automatizar el Génesis de la Oportunidad (Etapa 1)
+    // ── 5. Génesis de la Oportunidad en la Etapa Inicial ─────────────────────
     const opportunity = manager.create(Opportunity, {
       code: `OPP-${Date.now().toString().slice(-6)}`,
       companyId: user.companyId,
@@ -100,10 +107,10 @@ export class PrediosService {
       createdByUserId: user.id,
       currentOwnerUserId: user.id,
       status: 'OPEN',
-      canalHunting: 'TERRENO', // Default MVP
-      currentStageId: '00000000-0000-0000-0000-000000000001', // UUID dummy MVP para Etapa 1
-      leadSourceId: '00000000-0000-0000-0000-000000000002', // UUID dummy MVP
-      pipelineId: '00000000-0000-0000-0000-000000000003', // UUID dummy MVP
+      canalHunting: 'TERRENO',
+      leadSourceId: '00000000-0000-0000-0000-000000000002', // "Scraping" - único lead source en la BD
+      currentStageId: initialStage.id,  // UUID real de la BD
+      pipelineId: pipeline.id,          // UUID real de la BD
       currentStageEnteredAt: new Date(),
     });
     await manager.save(opportunity);

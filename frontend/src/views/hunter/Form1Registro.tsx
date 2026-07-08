@@ -10,7 +10,7 @@ export const Form1Registro: React.FC = () => {
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
-  const [hunters, setHunters] = useState<any[]>([]);
+
   
   const [formData, setFormData] = useState({
     ejecutivo: user?.id || '',
@@ -24,22 +24,9 @@ export const Form1Registro: React.FC = () => {
   });
 
   useEffect(() => {
-    // Fetch hunters list
-    const fetchHunters = async () => {
-      try {
-        const { fetchApi } = await import('../../services/api.client');
-        const res = await fetchApi<any[]>('/users?role=HUNTER'); // Dummy endpoint or real one if exists
-        setHunters(res);
-      } catch (e) {
-        console.warn("Could not fetch hunters, falling back to current user.");
-        if (user) setHunters([user]);
-      }
-    };
-    fetchHunters();
-
     const draft = getDraft('form1');
     if (draft) setFormData(draft);
-  }, [getDraft, user]);
+  }, [getDraft]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
@@ -99,13 +86,11 @@ export const Form1Registro: React.FC = () => {
           <div>
             <h3 className={styles.stepTitle}>Datos Básicos</h3>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Ejecutivo *</label>
-              <select name="ejecutivo" value={formData.ejecutivo} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccione Hunter...</option>
-                {hunters.map(h => (
-                  <option key={h.id} value={h.id}>{h.nombre || h.email}</option>
-                ))}
-              </select>
+              <label className={styles.label}>Ejecutivo</label>
+              <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
+                <span>👤</span>
+                <span>{user?.fullName || user?.email || 'Hunter'}</span>
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del edificio *</label>
