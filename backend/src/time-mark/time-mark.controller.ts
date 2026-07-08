@@ -37,4 +37,12 @@ export class TimeMarkController {
   ) {
     return this.timeMarkService.getTodaySessions(manager);
   }
+
+  @Get('history')
+  async getMyAttendanceHistory(
+    @Request() req: any,
+    @TransactionManager() manager: EntityManager
+  ) {
+    return this.timeMarkService.getMyHistory(req.user, manager);
+  }
 }

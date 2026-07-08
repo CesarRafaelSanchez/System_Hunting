@@ -1,18 +1,29 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, In } from 'typeorm';
 import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
 import { AttendanceSession } from '../database/entities/attendance-session.entity';
 import { AttendanceEvent } from '../database/entities/attendance-event.entity';
+import { MediaAsset } from '../database/entities/media-asset.entity';
 
 @Injectable()
 export class TimeMarkService {
-  
-  async checkIn(user: any, checkInDto: CheckInDto, manager: EntityManager) {
+  constructor(
+    @InjectEntityManager()
+    private readonly globalManager: EntityManager
+  ) {}
+
+  private getManager(manager?: EntityManager): EntityManager {
+    return manager || this.globalManager;
+  }
+
+  async checkIn(user: any, checkInDto: CheckInDto, manager?: EntityManager) {
+    const activeManager = this.getManager(manager);
     const today = new Date().toISOString().split('T')[0];
 
     // Verificar si ya existe una sesión abierta o completada hoy
-    const existingSession = await manager.findOne(AttendanceSession, {
+    const existingSession = await activeManager.findOne(AttendanceSession, {
       where: { userId: user.id, workDate: today }
     });
 
@@ -21,7 +32,7 @@ export class TimeMarkService {
     }
 
     // Crear la sesión
-    const session = manager.create(AttendanceSession, {
+    const session = activeManager.create(AttendanceSession, {
       companyId: user.companyId,
       userId: user.id,
       workDate: today,
@@ -31,10 +42,10 @@ export class TimeMarkService {
       startLongitude: checkInDto.longitude,
     });
 
-    const savedSession = await manager.save(session);
+    const savedSession = await activeManager.save(session);
 
     // Crear el evento de Clock In
-    const event = manager.create(AttendanceEvent, {
+    const event = activeManager.create(AttendanceEvent, {
       attendanceSessionId: savedSession.id,
       userId: user.id,
       eventType: 'CLOCK_IN',
@@ -42,15 +53,16 @@ export class TimeMarkService {
       photoMediaId: checkInDto.photoMediaId
     });
 
-    await manager.save(event);
+    await activeManager.save(event);
 
     return { message: 'Check-in exitoso', session: savedSession };
   }
 
-  async checkOut(user: any, checkOutDto: CheckOutDto, manager: EntityManager) {
+  async checkOut(user: any, checkOutDto: CheckOutDto, manager?: EntityManager) {
+    const activeManager = this.getManager(manager);
     const today = new Date().toISOString().split('T')[0];
 
-    const session = await manager.findOne(AttendanceSession, {
+    const session = await activeManager.findOne(AttendanceSession, {
       where: { userId: user.id, workDate: today }
     });
 
@@ -67,9 +79,9 @@ export class TimeMarkService {
     session.endLatitude = checkOutDto.latitude;
     session.endLongitude = checkOutDto.longitude;
 
-    const savedSession = await manager.save(session);
+    const savedSession = await activeManager.save(session);
 
-    const event = manager.create(AttendanceEvent, {
+    const event = activeManager.create(AttendanceEvent, {
       attendanceSessionId: savedSession.id,
       userId: user.id,
       eventType: 'CLOCK_OUT',
@@ -77,27 +89,91 @@ export class TimeMarkService {
       photoMediaId: checkOutDto.photoMediaId
     });
 
-    await manager.save(event);
+    await activeManager.save(event);
 
     return { message: 'Check-out exitoso', session: savedSession };
   }
 
-  async getTodaySessions(manager: EntityManager) {
+  async getTodaySessions(manager?: EntityManager) {
+    const activeManager = this.getManager(manager);
     const today = new Date().toISOString().split('T')[0];
 
-    const sessions = await manager.find(AttendanceSession, {
+    const sessions = await activeManager.find(AttendanceSession, {
       where: { workDate: today },
       relations: { user: true }
     });
 
-    return sessions.map(session => ({
-      id: session.id,
-      name: session.user?.fullName || 'Usuario',
-      status: session.status === 'OPEN' ? 'CHECKED_IN' : (session.status === 'CLOSED' ? 'INACTIVE' : session.status),
-      time: session.startedAt ? new Date(session.startedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
-      alert: null,
-      hasPhoto: true,
-      photoUrl: null
-    }));
+    const sessionIds = sessions.map(s => s.id);
+    const events = sessionIds.length > 0 
+      ? await activeManager.find(AttendanceEvent, {
+          where: { attendanceSessionId: In(sessionIds), eventType: 'CLOCK_IN' }
+        })
+      : [];
+
+    const mediaIds = events.map(e => e.photoMediaId).filter(Boolean);
+    const mediaAssets = mediaIds.length > 0
+      ? await activeManager.find(MediaAsset, {
+          where: { id: In(mediaIds) }
+        })
+      : [];
+
+    const mediaMap = new Map(mediaAssets.map(m => [m.id, m.fileUrl]));
+    const eventMap = new Map(events.map(e => [e.attendanceSessionId, mediaMap.get(e.photoMediaId)]));
+
+    return sessions.map(session => {
+      const photoUrl = eventMap.get(session.id) || null;
+      return {
+        id: session.id,
+        userId: session.userId,
+        name: session.user?.fullName || 'Usuario',
+        status: session.status === 'OPEN' ? 'CHECKED_IN' : (session.status === 'CLOSED' ? 'INACTIVE' : session.status),
+        time: session.startedAt ? new Date(session.startedAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' }) : '-',
+        startedAt: session.startedAt ? session.startedAt.toISOString() : null,
+        alert: null,
+        hasPhoto: !!photoUrl,
+        photoUrl: photoUrl
+      };
+    });
+  }
+
+  async getMyHistory(user: any, manager?: EntityManager) {
+    const activeManager = this.getManager(manager);
+    const sessions = await activeManager.find(AttendanceSession, {
+      where: { userId: user.id },
+      order: { workDate: 'DESC' }
+    });
+
+    const sessionIds = sessions.map(s => s.id);
+    const events = sessionIds.length > 0 
+      ? await activeManager.find(AttendanceEvent, {
+          where: { attendanceSessionId: In(sessionIds) },
+          order: { createdAt: 'ASC' }
+        })
+      : [];
+
+    return sessions.map(session => {
+      const checkInEvent = events.find(e => e.attendanceSessionId === session.id && e.eventType === 'CLOCK_IN');
+      const checkOutEvent = events.find(e => e.attendanceSessionId === session.id && e.eventType === 'CLOCK_OUT');
+
+      const checkInTime = checkInEvent ? new Date(checkInEvent.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' }) : '-';
+      const checkOutTime = checkOutEvent ? new Date(checkOutEvent.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' }) : '-';
+
+      let totalHoursStr = '-';
+      if (checkInEvent && checkOutEvent) {
+        const diffMs = new Date(checkOutEvent.createdAt).getTime() - new Date(checkInEvent.createdAt).getTime();
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        totalHoursStr = `${diffHrs}h ${diffMins}m`;
+      }
+
+      return {
+        id: session.id,
+        workDate: session.workDate,
+        checkIn: checkInTime,
+        checkOut: checkOutTime,
+        totalHours: totalHoursStr,
+        status: session.status === 'OPEN' ? 'CHECKED_IN' : (session.status === 'CLOSED' ? 'Completado' : session.status)
+      };
+    });
   }
 }

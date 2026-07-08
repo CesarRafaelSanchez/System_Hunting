@@ -1,7 +1,6 @@
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { User } from '../database/entities/user.entity';
 import { Company } from '../database/entities/company.entity';
@@ -15,7 +14,6 @@ export class UsersService implements OnApplicationBootstrap {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
-    private readonly configService: ConfigService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -36,9 +34,9 @@ export class UsersService implements OnApplicationBootstrap {
         }
 
         // 2. Read env vars
-        const adminEmail = this.configService.get<string>('INITIAL_ADMIN_EMAIL');
-        const adminPassword = this.configService.get<string>('INITIAL_ADMIN_PASSWORD');
-        const adminName = this.configService.get<string>('INITIAL_ADMIN_NAME') || 'Super Admin';
+        const adminEmail = process.env.INITIAL_ADMIN_EMAIL;
+        const adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+        const adminName = process.env.INITIAL_ADMIN_NAME || 'Super Admin';
 
         if (!adminEmail || !adminPassword) {
           this.logger.warn('INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD are not set in .env! Cannot create initial admin.');
