@@ -88,7 +88,10 @@ export class OpportunitiesService {
       where: whereClause,
       relations: {
         currentStage: true,
-        property: true,
+        property: {
+          distrito: true,
+          hunterPrincipal: true
+        },
         currentOwnerUser: true
       }
     });
@@ -99,6 +102,11 @@ export class OpportunitiesService {
       title: o.property?.nombreProyecto || `Op: ${o.code}`,
       subtitle: o.property?.nombreVia || `Etapa ID: ${o.currentStageId?.slice(0,5)}`,
       stage: o.currentStage ? (o.currentStage.position - 1) : (o.status === 'OPEN' ? 0 : (o.status === 'WON' ? 18 : 19)), 
+      property: o.property ? {
+        ...o.property,
+        distrito: o.property.distrito?.nombre || '-',
+        ejecutivo: o.property.hunterPrincipal?.fullName || o.currentOwnerUser?.fullName || 'Hunter'
+      } : null,
       data: o
     }));
   }

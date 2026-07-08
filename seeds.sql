@@ -26,10 +26,10 @@ VALUES
 ON CONFLICT (nombre) DO NOTHING;
 
 -- 4. Insertar Usuarios de Prueba (Password: mi_password_seguro)
-INSERT INTO users (id, company_id, full_name, email, password_hash, phone) 
+INSERT INTO users (id, company_id, full_name, email, password_hash, phone, role) 
 VALUES 
-  ('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111', 'Test Hunter', 'hunter@tudominio.com', '$2b$10$0vxlK3gTUhvSNtv1FwioBeJ/p8yRKIu4nf3R7CY3EczZ9BIk8I2V2', '987654321'),
-  ('33333333-3333-3333-3333-333333333332', '11111111-1111-1111-1111-111111111111', 'Test Backoffice', 'bo@tudominio.com', '$2b$10$0vxlK3gTUhvSNtv1FwioBeJ/p8yRKIu4nf3R7CY3EczZ9BIk8I2V2', '987654322');
+  ('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111', 'Test Hunter', 'hunter@tudominio.com', '$2b$10$0vxlK3gTUhvSNtv1FwioBeJ/p8yRKIu4nf3R7CY3EczZ9BIk8I2V2', '987654321', 'HUNTER'),
+  ('33333333-3333-3333-3333-333333333332', '11111111-1111-1111-1111-111111111111', 'Test Backoffice', 'bo@tudominio.com', '$2b$10$0vxlK3gTUhvSNtv1FwioBeJ/p8yRKIu4nf3R7CY3EczZ9BIk8I2V2', '987654322', 'BACKOFFICE');
 
 -- 5. Vincular Usuarios con Roles
 INSERT INTO user_roles (user_id, role_id)

@@ -37,7 +37,6 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   });
 
   if (!response.ok) {
-    // Interceptor 401
     if (response.status === 401) {
       console.warn('Acceso denegado o token expirado. Limpiando sesión...');
       import('../store/useAuthStore').then(module => {
@@ -46,13 +45,10 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     
-    // Interceptor genérico de errores (500, etc.)
     const errorData = await response.json().catch(() => null);
-    
     if (response.status >= 500) {
       console.error('Error interno del servidor:', errorData);
     }
-    
     throw new ApiError(response.status, errorData);
   }
 

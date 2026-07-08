@@ -274,6 +274,180 @@ export const KanbanBoard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [activeCardData, setActiveCardData] = useState<any>(null);
 
+  // Estados para búsqueda, filtros avanzados y ordenación
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    canal: '',
+    distrito: '',
+    tipoConstruccion: '',
+    rangoHogares: '',
+    hunterName: ''
+  });
+  const [sortOption, setSortOption] = useState<string>('');
+  const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
+        setShowFiltersDropdown(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Extraer valores únicos dinámicamente de las tarjetas
+  const uniqueDistritos = React.useMemo(() => {
+    const distritos = new Set<string>();
+    cards.forEach(c => {
+      const p = c.property || {};
+      const dist = p.distrito;
+      if (dist) {
+        if (typeof dist === 'string') distritos.add(dist);
+        else if (dist.nombre) distritos.add(dist.nombre);
+      }
+    });
+    return Array.from(distritos).sort();
+  }, [cards]);
+
+  const uniqueHunters = React.useMemo(() => {
+    const hunters = new Set<string>();
+    cards.forEach(c => {
+      const p = c.property || {};
+      const name = p.ejecutivo || c.createdByUserName; // fallback
+      if (name) hunters.add(name);
+    });
+    return Array.from(hunters).sort();
+  }, [cards]);
+
+  // Lógica de filtrado y ordenado
+  const filteredAndSortedCards = React.useMemo(() => {
+    let result = [...cards];
+
+    // 1. Búsqueda
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase().trim();
+      result = result.filter(card => {
+        const p = card.property || {};
+        const title = (p.nombreProyecto || card.title || '').toLowerCase();
+        const code = (card.code || '').toLowerCase();
+        const address = `${p.tipoVia || ''} ${p.nombreVia || ''} ${p.numeracionMunicipal || p.numeroVia || ''}`.toLowerCase();
+        const ejecutivo = (p.ejecutivo || '').toLowerCase();
+        const dist = p.distrito;
+        const distrito = (typeof dist === 'string' ? dist : dist?.nombre || '').toLowerCase();
+        return title.includes(term) || code.includes(term) || address.includes(term) || ejecutivo.includes(term) || distrito.includes(term);
+      });
+    }
+
+    // 2. Filtros avanzados
+    if (filters.canal) {
+      result = result.filter(card => (card.canalHunting || 'FUTURA') === filters.canal);
+    }
+    if (filters.distrito) {
+      result = result.filter(card => {
+        const dist = card.property?.distrito;
+        const distName = typeof dist === 'string' ? dist : dist?.nombre || '';
+        return distName.toLowerCase() === filters.distrito.toLowerCase();
+      });
+    }
+    if (filters.tipoConstruccion) {
+      result = result.filter(card => {
+        const p = card.property || {};
+        const tipo = p.tipoConstruccion || p.estreno || p.tipoEdificio || 'MODERNO';
+        return tipo.toLowerCase() === filters.tipoConstruccion.toLowerCase();
+      });
+    }
+    if (filters.rangoHogares) {
+      result = result.filter(card => {
+        const p = card.property || {};
+        let totalHogares = p.totalHogares || p.numeroHogares || 0;
+        if (!totalHogares && card.towersData) {
+          totalHogares = card.towersData.reduce((acc: number, t: any) => {
+            const pisos = parseInt(t.pisos_torre) || 0;
+            if (!t.hogares_por_piso) return acc;
+            if (t.hogares_por_piso.includes(',')) {
+              return acc + t.hogares_por_piso.split(',').reduce((s: number, hp: string) => s + (parseInt(hp) || 0), 0);
+            }
+            return acc + (pisos * (parseInt(t.hogares_por_piso) || 0));
+          }, 0);
+        }
+
+        if (filters.rangoHogares === '0-30') return totalHogares <= 30;
+        if (filters.rangoHogares === '31-75') return totalHogares >= 31 && totalHogares <= 75;
+        if (filters.rangoHogares === '76+') return totalHogares > 75;
+        return true;
+      });
+    }
+    if (filters.hunterName) {
+      result = result.filter(card => {
+        const p = card.property || {};
+        const name = p.ejecutivo || card.createdByUserName;
+        return (name || '').toLowerCase() === filters.hunterName.toLowerCase();
+      });
+    }
+
+    // 3. Ordenación
+    if (sortOption) {
+      result.sort((a, b) => {
+        const pA = a.property || {};
+        const pB = b.property || {};
+
+        if (sortOption === 'name_asc') {
+          const titleA = (pA.nombreProyecto || a.title || '').toLowerCase();
+          const titleB = (pB.nombreProyecto || b.title || '').toLowerCase();
+          return titleA.localeCompare(titleB);
+        }
+        if (sortOption === 'name_desc') {
+          const titleA = (pA.nombreProyecto || a.title || '').toLowerCase();
+          const titleB = (pB.nombreProyecto || b.title || '').toLowerCase();
+          return titleB.localeCompare(titleA);
+        }
+        if (sortOption === 'hogares_desc' || sortOption === 'hogares_asc') {
+          const getHogares = (card: any) => {
+            const p = card.property || {};
+            let total = p.totalHogares || p.numeroHogares || 0;
+            if (!total && card.towersData) {
+              total = card.towersData.reduce((acc: number, t: any) => {
+                const pisos = parseInt(t.pisos_torre) || 0;
+                if (!t.hogares_por_piso) return acc;
+                if (t.hogares_por_piso.includes(',')) {
+                  return acc + t.hogares_por_piso.split(',').reduce((s: number, hp: string) => s + (parseInt(hp) || 0), 0);
+                }
+                return acc + (pisos * (parseInt(t.hogares_por_piso) || 0));
+              }, 0);
+            }
+            return Number(total) || 0;
+          };
+          const hogaresA = getHogares(a);
+          const hogaresB = getHogares(b);
+          return sortOption === 'hogares_desc' ? hogaresB - hogaresA : hogaresA - hogaresB;
+        }
+        if (sortOption === 'date_desc') {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        }
+        if (sortOption === 'date_asc') {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateA - dateB;
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [cards, searchTerm, filters, sortOption]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -408,24 +582,168 @@ export const KanbanBoard: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-10">
+      <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-30">
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input 
               type="text" 
               placeholder="Buscar clientes potenciales" 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
               className="pl-9 pr-4 py-1.5 border border-gray-200 bg-white rounded-2xl text-sm focus:border-ghl-lightBlue focus:ring-2 focus:ring-ghl-lightBlue outline-none transition-all w-64"
             />
           </div>
-          <button className="rounded-full border border-gray-200 bg-white px-4 py-1.5 text-sm text-slate-700 flex items-center space-x-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span>Filtros avanzados</span>
-          </button>
-          <button className="rounded-full border border-gray-200 bg-white px-4 py-1.5 text-sm text-slate-700 flex items-center space-x-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-            <span>Ordenar</span>
-          </button>
+          
+          {/* Filtros avanzados */}
+          <div className="relative" ref={filtersRef}>
+            <button 
+              onClick={() => setShowFiltersDropdown(!showFiltersDropdown)}
+              className={`rounded-full border px-4 py-1.5 text-sm flex items-center space-x-2 shadow-sm transition-colors ${
+                (filters.canal || filters.distrito || filters.tipoConstruccion || filters.rangoHogares || filters.hunterName)
+                  ? 'border-blue-200 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100' 
+                  : 'border-gray-200 bg-white text-slate-700 hover:bg-gray-50'
+              }`}
+            >
+              <Filter className="w-4 h-4 text-current" />
+              <span>Filtros avanzados</span>
+              {(filters.canal || filters.distrito || filters.tipoConstruccion || filters.rangoHogares || filters.hunterName) && (
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              )}
+            </button>
+            {showFiltersDropdown && (
+              <div className="absolute left-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-4 z-50 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-bold text-slate-800 text-sm">Filtros avanzados</h4>
+                  {(filters.canal || filters.distrito || filters.tipoConstruccion || filters.rangoHogares || filters.hunterName) && (
+                    <button 
+                      onClick={() => setFilters({ canal: '', distrito: '', tipoConstruccion: '', rangoHogares: '', hunterName: '' })}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Canal Hunting</label>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={filters.canal}
+                      onChange={e => setFilters({ ...filters, canal: e.target.value })}
+                    >
+                      <option value="">Todos los canales</option>
+                      <option value="FUTURA">FUTURA</option>
+                      <option value="NOVACORE">NOVACORE</option>
+                      <option value="REFERIDO">REFERIDO</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Distrito</label>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={filters.distrito}
+                      onChange={e => setFilters({ ...filters, distrito: e.target.value })}
+                    >
+                      <option value="">Todos los distritos</option>
+                      {uniqueDistritos.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Estado de Construcción</label>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={filters.tipoConstruccion}
+                      onChange={e => setFilters({ ...filters, tipoConstruccion: e.target.value })}
+                    >
+                      <option value="">Cualquiera</option>
+                      <option value="Estreno">Estreno</option>
+                      <option value="Moderno">Moderno</option>
+                      <option value="Antiguo">Antiguo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Total Hogares</label>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={filters.rangoHogares}
+                      onChange={e => setFilters({ ...filters, rangoHogares: e.target.value })}
+                    >
+                      <option value="">Cualquier tamaño</option>
+                      <option value="0-30">Pequeño (≤ 30 hogares)</option>
+                      <option value="31-75">Mediano (31 a 75 hogares)</option>
+                      <option value="76+">Grande (&gt; 75 hogares)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Ejecutivo / Hunter</label>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={filters.hunterName}
+                      onChange={e => setFilters({ ...filters, hunterName: e.target.value })}
+                    >
+                      <option value="">Todos los Hunters</option>
+                      {uniqueHunters.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Ordenación */}
+          <div className="relative" ref={sortRef}>
+            <button 
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className={`rounded-full border px-4 py-1.5 text-sm flex items-center space-x-2 shadow-sm transition-colors ${
+                sortOption 
+                  ? 'border-blue-200 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100' 
+                  : 'border-gray-200 bg-white text-slate-700 hover:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4 text-current" />
+              <span>Ordenar</span>
+              {sortOption && (
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              )}
+            </button>
+            {showSortDropdown && (
+              <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200/80 py-1.5 z-50 animate-in fade-in duration-200">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Ordenar por</div>
+                <div className="space-y-0.5">
+                  {[
+                    { value: '', label: 'Por defecto' },
+                    { value: 'name_asc', label: 'Nombre Proyecto (A-Z)' },
+                    { value: 'name_desc', label: 'Nombre Proyecto (Z-A)' },
+                    { value: 'hogares_desc', label: 'Hogares (Mayor a menor)' },
+                    { value: 'hogares_asc', label: 'Hogares (Menor a mayor)' },
+                    { value: 'date_desc', label: 'Fecha de creación (Reciente)' },
+                    { value: 'date_asc', label: 'Fecha de creación (Antiguo)' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setSortOption(opt.value);
+                        setShowSortDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between ${
+                        sortOption === opt.value 
+                          ? 'bg-blue-50 text-blue-700 font-semibold' 
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {sortOption === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           {/* Toggle Group */}
@@ -470,7 +788,7 @@ export const KanbanBoard: React.FC = () => {
                   key={i} 
                   stageIndex={i} 
                   title={stage} 
-                  cards={cards.filter(c => c.stage === i)} 
+                  cards={filteredAndSortedCards.filter(c => c.stage === i)} 
                   onCardClick={Object.assign(setSelectedCard, { isDragDisabled: user?.role === 'HUNTER' })}
                   role={user?.role}
                   onActionClick={handleActionClick}
@@ -485,7 +803,7 @@ export const KanbanBoard: React.FC = () => {
       ) : (
         <div className="flex-1 overflow-hidden">
           <OpportunitiesTable 
-            cards={cards} 
+            cards={filteredAndSortedCards} 
             STAGES={STAGES} 
             onCardClick={setSelectedCard} 
           />
