@@ -13,6 +13,7 @@ import { MediaModule } from './media/media.module';
 import { ReportQueueModule } from './report-queue/report-queue.module';
 import { BotApiModule } from './bot-api/bot-api.module';
 import { UsersModule } from './users/users.module';
+import { CompaniesModule } from './companies/companies.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module';
     ReportQueueModule,
     BotApiModule,
     UsersModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
