@@ -1,5 +1,7 @@
-import { Controller, Post, Body, UseGuards, Request, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Request, BadRequestException, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
@@ -12,7 +14,27 @@ import { AuthService } from '../auth/auth.service';
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('companies')
 export class CompaniesController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    @InjectRepository(Company)
+    private readonly companyRepository: Repository<Company>
+  ) {}
+
+  @Get()
+  async findAll() {
+    return this.companyRepository.find({
+      select: {
+        id: true,
+        name: true,
+        ruc: true,
+        slug: true,
+        isActive: true
+      },
+      order: {
+        name: 'ASC'
+      }
+    });
+  }
 
   @Post()
   async setupCompany(
