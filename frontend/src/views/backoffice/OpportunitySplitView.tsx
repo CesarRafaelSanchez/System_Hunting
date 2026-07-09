@@ -116,7 +116,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     coordenadasF2: getCoordinates(),
     numeroHpsF2: card.property?.totalHogares?.toString() || '-',
     estrenoF2: hasForm2 
-      ? (card.property?.estadoConstruccion === 'EN_CONSTRUCCION' || card.property?.estadoConstruccion === 'SÍ' || card.property?.estadoConstruccion === 'SI' ? 'SÍ' : 'NO') 
+      ? (['SÍ', 'SI', 'Sí', 'Si', 'EN_CONSTRUCCION', 'ESTRENO'].includes(card.property?.estadoConstruccion) ? 'SÍ' : 'NO') 
       : '-',
     fechaMontantesF2: hasForm2 ? formatDateString(card.property?.terminoMontantes) : '-',
     fechaEntregaF2: hasForm2 ? formatDateString(card.property?.fechaEntrega) : '-',
@@ -132,7 +132,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     origenF3: hasForm3 ? (card.property?.origenProspeccion || '-') : '-',
     clasificacionF3: hasForm3 ? (card.property?.clasificacionProyecto || '-') : '-',
     tipoConstruccionF3: hasForm3 
-      ? (card.property?.estadoConstruccion === 'EN_CONSTRUCCION' || card.property?.estadoConstruccion === 'SÍ' || card.property?.estadoConstruccion === 'SI' ? 'SÍ' : 'NO') 
+      ? (['SÍ', 'SI', 'Sí', 'Si', 'EN_CONSTRUCCION', 'ESTRENO'].includes(card.property?.estadoConstruccion) ? 'SÍ' : 'NO') 
       : '-',
     juntaDirectivaF3: hasForm3 ? (card.property?.juntaDirectiva || '-') : '-',
     cargoResponsableF3: '-',
@@ -605,6 +605,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                             coordenadas: formData.coordenadasF2,
                             numeroHPs: formData.numeroHpsF2,
                             tipoEdificio: formData.tipoEdificioF2,
+                            estreno: formData.estrenoF2,
                             fechaEntrega: formData.fechaEntregaF2,
                             fechaMontantes: formData.fechaMontantesF2,
                             inmobiliaria: formData.inmobiliariaF2,
@@ -616,6 +617,10 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                             clasificacion: formData.clasificacionF3,
                             tipoConstruccion: formData.tipoConstruccionF3,
                             juntaDirectiva: formData.juntaDirectivaF3,
+                            cargoResponsable: formData.cargoResponsableF3,
+                            nombreResponsable: formData.nombreResponsableF3,
+                            telefonoResponsable: formData.telefonoResponsableF3,
+                            correoResponsable: formData.correoResponsableF3,
                             visitaInspeccion: formData.visitaInspeccionF3,
                             horarioVisita: formData.horarioVisitaF3,
                             departamento: formData.departamentoF3,

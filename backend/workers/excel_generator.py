@@ -53,32 +53,51 @@ def generate_excel(payload_json):
         else:
             safe_write(ws, 'H8', 'X')
             
-        # 2. FUENTE/ORIGEN (H12: PROPIO, M12: REFERIDO)
+        # 2. FUENTE/ORIGEN (E12: PROPIO, M12: REFERIDO)
         origen = str(property_data.get('origen', '')).upper()
         if 'REFERIDO' in origen:
             safe_write(ws, 'M12', 'X')
+            safe_write(ws, 'E12', '')
         else:
-            safe_write(ws, 'H12', 'X')
+            safe_write(ws, 'E12', 'X')
+            safe_write(ws, 'M12', '')
             
-        # 3. CLASIFICACION (G16: EDIFICIO, M16: CONDOMINIO)
+        # 3. CLASIFICACION (E16: EDIFICIO, I16: CONDOMINIO)
         clasificacion = str(property_data.get('clasificacion', '')).upper()
         total_torres = int(property_data.get('totalTorres', 1))
         if 'CONDOMINIO' in clasificacion or total_torres >= 3:
-            safe_write(ws, 'M16', 'X')
+            safe_write(ws, 'I16', 'X')
+            safe_write(ws, 'E16', '')
         else:
-            safe_write(ws, 'G16', 'X')
+            safe_write(ws, 'E16', 'X')
+            safe_write(ws, 'I16', '')
             
-        # 4. TIPO DE CONSTRUCCION (G22: ESTRENO, J22: MODERNO, M22: ANTIGUO)
+        # 4. TIPO DE CONSTRUCCION (E22: ESTRENO, I22: MODERNO, L22: ANTIGUO)
         tipo_construccion = str(property_data.get('tipoConstruccion', '')).upper()
         if 'ESTRENO' in tipo_construccion:
-            safe_write(ws, 'G22', 'X')
+            safe_write(ws, 'E22', 'X')
+            safe_write(ws, 'I22', '')
+            safe_write(ws, 'L22', '')
             # Si es Estreno, inyectamos las fechas correspondientes
             safe_write(ws, 'E23', str(property_data.get('fechaEntrega', '')))
             safe_write(ws, 'E25', str(property_data.get('fechaMontantes', '')))
         elif 'ANTIGUO' in tipo_construccion:
-            safe_write(ws, 'M22', 'X')
+            safe_write(ws, 'L22', 'X')
+            safe_write(ws, 'E22', '')
+            safe_write(ws, 'I22', '')
         else:
-            safe_write(ws, 'J22', 'X')
+            safe_write(ws, 'I22', 'X')
+            safe_write(ws, 'E22', '')
+            safe_write(ws, 'L22', '')
+
+        # JUNTA DIRECTIVA (E31: SI, I31: NO)
+        junta_directiva = str(property_data.get('juntaDirectiva', '')).upper()
+        if 'SI' in junta_directiva or 'SÍ' in junta_directiva:
+            safe_write(ws, 'E31', 'X')
+            safe_write(ws, 'I31', '')
+        else:
+            safe_write(ws, 'I31', 'X')
+            safe_write(ws, 'E31', '')
 
         # 5. DIRECCION Y COORDENADAS
         safe_write(ws, 'C46', str(property_data.get('tipoVia', '')).upper()) # TIPO VIA
@@ -92,8 +111,24 @@ def generate_excel(payload_json):
         safe_write(ws, 'C53', total_torres) # TOTAL TORRES
         safe_write(ws, 'C54', int(property_data.get('totalHogares', 0))) # TOTAL HOGARES
         
-        safe_write(ws, 'I35', str(property_data.get('responsable', '')).upper()) # Debajo de NOMBRE
-        safe_write(ws, 'D35', str(property_data.get('telefonoResponsable', ''))) # Debajo de CELULAR
+        # RESPONSABLE
+        safe_write(ws, 'D34', str(property_data.get('cargoResponsable', '')).upper()) # CARGO
+        safe_write(ws, 'I34', str(property_data.get('responsable', '')).upper()) # NOMBRE
+        safe_write(ws, 'D35', str(property_data.get('telefonoResponsable', ''))) # CELULAR
+        safe_write(ws, 'I35', str(property_data.get('correoResponsable', '')).upper()) # CORREO
+
+        # VISITA TECNICA
+        safe_write(ws, 'D39', str(property_data.get('fechaVisitaTecnica', ''))) # FECHA
+        horario = str(property_data.get('horarioVisita', '')).upper()
+        if '9' in horario or '12' in horario or ('AM' in horario and '1' not in horario):
+            safe_write(ws, 'I39', 'X')
+            safe_write(ws, 'L39', '')
+        elif '1' in horario or '4' in horario or 'PM' in horario:
+            safe_write(ws, 'L39', 'X')
+            safe_write(ws, 'I39', '')
+        else:
+            safe_write(ws, 'I39', '')
+            safe_write(ws, 'L39', '')
             
         # Matriz de Torres Relacional
         matrix_list = property_data.get('matrixList', []) if isinstance(property_data, dict) else []

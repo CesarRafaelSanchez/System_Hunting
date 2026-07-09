@@ -84,9 +84,11 @@ export class ReportProcessor extends WorkerHost {
       return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
     };
 
-    const estreno = (opportunity.property?.estadoConstruccion === 'SÍ' || opportunity.property?.estadoConstruccion === 'SI') ? 'Sí' : 'No';
-    const fechaMontantes = formatDate(opportunity.property?.terminoMontantes);
-    const fechaEntrega = formatDate(opportunity.property?.fechaEntrega);
+    const estadoConst = (opportunity.property?.estadoConstruccion || '').toUpperCase();
+    const estreno = (estadoConst === 'SÍ' || estadoConst === 'SI' || estadoConst === 'YES') ? 'Sí' : 'No';
+    const isEstreno = estreno === 'Sí';
+    const fechaMontantes = isEstreno ? formatDate(opportunity.property?.terminoMontantes) : 'N/A';
+    const fechaEntrega = isEstreno ? formatDate(opportunity.property?.fechaEntrega) : 'N/A';
 
     // Matriz de hogares de todas las torres
     const sortedTorres = (opportunity.property?.torres || []).slice().sort((a, b) => a.nombreTorre.localeCompare(b.nombreTorre));
@@ -144,7 +146,6 @@ export class ReportProcessor extends WorkerHost {
     const origenStr = opportunity.property?.origenProspeccion || asignacionPayload.ingreso || 'PROPIO';
     const totalTorres = opportunity.property?.totalTorres || 1;
     const totalHogares = opportunity.property?.totalHogares || 0;
-    const isEstreno = estreno === 'Sí';
     const tipoConst = isEstreno ? 'ESTRENO' : (opportunity.property?.clasificacionProyecto || 'MODERNO');
 
     const payload = {
@@ -152,7 +153,7 @@ export class ReportProcessor extends WorkerHost {
       canalHunting: opportunity.canalHunting || 'NOVACORE',
       property: {
         nombreEdificio: opportunity.property?.nombreProyecto || 'Mock Edificio',
-        tipoEdificio: opportunity.property?.tipoDesarrollo || asignacionPayload.tipoEdificio || 'Estreno',
+        tipoEdificio: asignacionPayload.tipoEdificio || opportunity.property?.tipoDesarrollo || 'Estreno',
         direccion: direccionStr,
         tipoVia: tipoVia,
         nombreVia: nombreVia,
@@ -162,9 +163,14 @@ export class ReportProcessor extends WorkerHost {
         estreno: estreno,
         fechaMontantes: fechaMontantes,
         fechaEntrega: fechaEntrega,
-        inmobiliaria: asignacionPayload.inmobiliaria || 'N/A',
+        inmobiliaria: isEstreno ? (asignacionPayload.inmobiliaria || 'N/A') : 'N/A',
         responsable: fichaPayload.nombreResponsable || 'N/A',
         telefonoResponsable: fichaPayload.telefonoResponsable || 'N/A',
+        cargoResponsable: fichaPayload.cargoResponsable || 'N/A',
+        correoResponsable: fichaPayload.correoResponsable || 'N/A',
+        fechaVisitaTecnica: formatDate(opportunity.property?.fechaVisitaTecnica || fichaPayload.visitaInspeccion),
+        horarioVisita: opportunity.property?.horarioVisita || fichaPayload.horarioVisita || 'N/A',
+        juntaDirectiva: opportunity.property?.juntaDirectiva || fichaPayload.juntaDirectiva || 'No',
         codigoPostal: opportunity.property?.codigoPostal || '',
         totalTorres: totalTorres,
         totalHogares: totalHogares,

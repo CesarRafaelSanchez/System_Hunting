@@ -211,12 +211,39 @@ export class OpportunitiesService {
       // Tipo de edificio y estado
       if (dto.tipoEdificio && dto.tipoEdificio !== '-')  predio.clasificacionProyecto = dto.tipoEdificio;
       if (dto.tipoProyecto && dto.tipoProyecto !== '-')  predio.tipoDesarrollo        = dto.tipoProyecto;
+      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno;
+      if (estrenoVal && estrenoVal !== '-')            predio.estadoConstruccion    = estrenoVal;
       if (dto.juntaDirectiva && dto.juntaDirectiva !== '-') predio.juntaDirectiva       = dto.juntaDirectiva;
       if (dto.visitaInspeccion && dto.visitaInspeccion !== '-') {
         const parsed = parseBackendDate(dto.visitaInspeccion);
         if (parsed) predio.fechaVisitaTecnica = parsed;
       }
 
+      if (dto.currentOwnerUserId && dto.currentOwnerUserId !== '-') {
+        let userId = dto.currentOwnerUserId.trim();
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+        if (!isUuid) {
+          // Resolve by name or email (exact or partial match)
+          const resolved = await manager.query(
+            `SELECT id FROM users 
+             WHERE LOWER(TRIM(full_name)) = LOWER($1) 
+                OR LOWER(TRIM(email)) = LOWER($1)
+                OR LOWER(full_name) LIKE $2
+                OR LOWER(email) LIKE $2
+             LIMIT 1`,
+            [userId, `%${userId.toLowerCase()}%`]
+          );
+          if (resolved && resolved.length > 0) {
+            userId = resolved[0].id;
+          }
+        }
+        
+        const isValidUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+        if (isValidUuid) {
+          opp.currentOwnerUserId = userId;
+          predio.hunterPrincipalId = userId;
+        }
+      }
 
       await manager.save(Predio, predio);
 
@@ -270,6 +297,30 @@ export class OpportunitiesService {
     if (dto && Object.keys(dto).length > 0) {
       const formType = dto._formType || 'FORM_GENERIC';
       try {
+        if (formType === 'FORM_GENERIC') {
+          // Si viene del BackOffice (sin _formType específico), actualizamos las sumisiones existentes
+          const formCodes = ['FORM_ASIGNACION', 'FORM_FICHA_DATOS'];
+          for (const code of formCodes) {
+            const existingSub = await manager.query(
+              `SELECT fs.id, fs.raw_payload_json FROM form_submissions fs
+               JOIN forms f ON fs.form_id = f.id
+               WHERE fs.opportunity_id = $1 AND f.code = $2
+               ORDER BY fs.submitted_at DESC LIMIT 1`,
+              [opp.id, code]
+            );
+            if (existingSub && existingSub.length > 0) {
+              const mergedPayload = {
+                ...(existingSub[0].raw_payload_json || {}),
+                ...dto
+              };
+              await manager.query(
+                `UPDATE form_submissions SET raw_payload_json = $1::jsonb WHERE id = $2`,
+                [JSON.stringify(mergedPayload), existingSub[0].id]
+              );
+            }
+          }
+        }
+
         await manager.query(
           `INSERT INTO form_submissions (form_id, company_id, opportunity_id, property_id, submitted_by_user_id, status, raw_payload_json)
            SELECT id, $2, $3, $4, $5, 'SUBMITTED', $6::jsonb
@@ -279,7 +330,7 @@ export class OpportunitiesService {
         );
       } catch (e) {
         // Si no existe el form configurado, se omite sin romper el flujo
-        console.warn('[updateOpportunity] form_submissions insert skipped:', e.message);
+        console.warn('[updateOpportunity] form_submissions update/insert skipped:', e.message);
       }
     }
 
@@ -524,7 +575,7 @@ export class OpportunitiesService {
        FROM form_submissions fs
        JOIN forms f ON fs.form_id = f.id
        WHERE fs.opportunity_id = $1 AND fs.company_id = $2
-       ORDER BY fs.submitted_at DESC`,
+       ORDER BY fs.submitted_at ASC`,
       [id, user.companyId]
     );
   }
