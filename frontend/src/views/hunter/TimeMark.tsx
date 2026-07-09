@@ -94,7 +94,7 @@ export const TimeMark: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="mb-6 relative w-full md:w-96">
             <input 
               type="text" 
@@ -233,7 +233,7 @@ export const TimeMark: React.FC = () => {
         )}
       </div>
 
-      <div className="max-w-4xl w-full mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-hidden">
+      <div className="max-w-4xl w-full mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Historial de Asistencia</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

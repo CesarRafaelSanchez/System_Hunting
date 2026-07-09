@@ -43,9 +43,9 @@ export const AsignacionPredio: React.FC = () => {
     }
   }, [showFormId, user?.id]);
 
-  // Stage 3 = Pendiente Envío de Formulario de Asignación
+  // stage index 3 = pipeline position 4 = "Pendiente Envío de Formulario de Asignación"
   const pending = predios.filter(p => p.stage === 3);
-  // Stage 4+ = Formulario de Asignación completado o más avanzado
+  // stage index >= 4 = position >= 5 = Formulario de Asignación completado o más avanzado
   const completed = predios.filter(p => p.stage !== undefined && p.stage >= 4);
 
   const displayList = activeTab === 'pending' ? pending : completed;
@@ -60,8 +60,8 @@ export const AsignacionPredio: React.FC = () => {
   return (
     <div className="p-4 md:p-6 w-full max-w-6xl mx-auto">
       {showFormId ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col" style={{ maxHeight: 'calc(100vh - 130px)', overflow: 'hidden' }}>
+          <div className="flex justify-between items-center border-b border-gray-100 p-6 flex-shrink-0">
             <h2 className="text-xl font-bold text-gray-800">Completar Asignación de Predio</h2>
             <button 
               onClick={() => { setShowFormId(null); fetchPredios(); }}
@@ -70,9 +70,13 @@ export const AsignacionPredio: React.FC = () => {
               Volver a la lista
             </button>
           </div>
-          <div className="max-w-2xl mx-auto">
-            {/* The Form2 needs the opportunity ID. For this to work best, we should pass the id to Form2Asignacion if it accepts it, but currently it might not. If Form2 is hardcoded for demo, it's ok for now. */}
-            <Form2Asignacion />
+          <div className="overflow-y-auto flex-1 p-6">
+            <div className="max-w-2xl mx-auto">
+              <Form2Asignacion 
+                opportunityId={showFormId}
+                onComplete={() => { setShowFormId(null); fetchPredios(); }}
+              />
+            </div>
           </div>
         </div>
       ) : (

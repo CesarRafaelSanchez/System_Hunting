@@ -43,8 +43,8 @@ export const RegistrarPredio: React.FC = () => {
   return (
     <div className="p-4 md:p-6 w-full max-w-6xl mx-auto">
       {showForm ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col" style={{ maxHeight: 'calc(100vh - 130px)', overflow: 'hidden' }}>
+          <div className="flex justify-between items-center border-b border-gray-100 p-6 flex-shrink-0">
             <h2 className="text-xl font-bold text-gray-800">Registrar Nuevo Predio</h2>
             <button 
               onClick={() => { setShowForm(false); fetchPredios(); }}
@@ -53,8 +53,10 @@ export const RegistrarPredio: React.FC = () => {
               Volver a la lista
             </button>
           </div>
-          <div className="max-w-2xl mx-auto">
-            <Form1Registro />
+          <div className="overflow-y-auto flex-1 p-6">
+            <div className="max-w-2xl mx-auto">
+              <Form1Registro />
+            </div>
           </div>
         </div>
       ) : (

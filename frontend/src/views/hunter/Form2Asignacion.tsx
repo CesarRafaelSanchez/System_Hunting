@@ -10,8 +10,8 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
-  const [hunters, setHunters] = useState<any[]>([]);
   
+
   const [formData, setFormData] = useState({
     nombreHunter: user?.id || '',
     ingreso: '',
@@ -26,27 +26,63 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
     esEstreno: 'No',
     fechaMontantes: '',
     fechaEntrega: '',
+    inmobiliaria: '',
     asignarReasignar: ''
   });
 
   useEffect(() => {
-    const fetchHunters = async () => {
+    const fetchOpportunityData = async () => {
+      const draft = getDraft(`form2-${opportunityId}`);
+      if (draft) {
+        setFormData(draft);
+        return;
+      }
+      
+      if (!opportunityId) return;
+
       try {
         const { fetchApi } = await import('../../services/api.client');
-        const res = await fetchApi<any[]>('/users?role=HUNTER');
-        setHunters(res);
+        const res = await fetchApi<any[]>('/opportunities');
+        const opp = res.find((o: any) => o.id === opportunityId);
+        if (opp && opp.property) {
+          const prop = opp.property;
+          const getCoordinates = () => {
+            const gps = prop.coordenadasGps;
+            if (!gps) return '';
+            if (typeof gps === 'string') return gps.replace(/[()]/g, '');
+            if (typeof gps === 'object' && gps.x !== undefined && gps.y !== undefined) {
+              return `${gps.y}, ${gps.x}`;
+            }
+            return '';
+          };
+
+          setFormData(prev => ({
+            ...prev,
+            nombreProyecto: prop.nombreProyecto || '',
+            tipoVia: prop.tipoVia || '',
+            nombreVia: prop.nombreVia || '',
+            numeracionesVia: prop.numeracionMunicipal || '',
+            distrito: prop.distrito || '',
+            coordenadas: getCoordinates(),
+            numeroHPs: prop.totalHogares?.toString() || '',
+            tipoEdificio: prop.clasificacionProyecto || '',
+          }));
+        }
       } catch (e) {
-        if (user) setHunters([user]);
+        console.error('Error pre-filling Form2', e);
       }
     };
-    fetchHunters();
 
-    const draft = getDraft(`form2-${opportunityId}`);
-    if (draft) setFormData(draft);
-  }, [getDraft, user, opportunityId]);
+    fetchOpportunityData();
+  }, [getDraft, opportunityId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
+    if (e.target.name === 'esEstreno' && e.target.value === 'No') {
+      newFormData.fechaMontantes = '';
+      newFormData.fechaEntrega = '';
+      newFormData.inmobiliaria = '';
+    }
     setFormData(newFormData);
     saveDraft(`form2-${opportunityId}`, newFormData);
   };
@@ -71,19 +107,30 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
     e.preventDefault();
     try {
       const { opportunitiesService } = await import('../../services/opportunities.service');
-      // Transición de 4 -> 5
-      await opportunitiesService.transitionStage(opportunityId || '', 5, { reason: 'Formulario 2 completado' } as any);
+      
+      // 1. Guardar datos del formulario en el backend (actualiza el predio)
+      if (opportunityId) {
+        await opportunitiesService.updateForms(opportunityId, {
+          ...formData,
+          _formType: 'FORM_ASIGNACION',
+        } as any);
+      }
+
+      // 2. Transición de etapa: 4 → 5 (Form Asignación Completado)
+      // La función le suma +1, así que pasamos 4 para que llegue a posición 5
+      await opportunitiesService.transitionStage(opportunityId || '', 4, 'Formulario de asignación completado');
+
       toast.success('Formulario de asignación completado.');
       clearDraft(`form2-${opportunityId}`);
       if (onComplete) onComplete();
     } catch (error: any) {
-      if (error.message === 'Failed to fetch' || error.message.includes('NetworkError') || !navigator.onLine) {
-        await addToSyncQueue(`/opportunities/${opportunityId}/transition`, 'POST', { stageId: 5, payload: { reason: 'Formulario 2 completado' } });
-        toast.warning('Sin conexión. Los datos se guardaron localmente y se enviarán automáticamente al recuperar la señal.');
+      if (!navigator.onLine || error.message === 'Failed to fetch' || error.message?.includes('NetworkError')) {
+        await addToSyncQueue(`/opportunities/${opportunityId}/stage`, 'PATCH', { toStagePosition: 5, reason: 'Formulario de asignación completado' });
+        toast.warning('Sin conexión. Se guardó localmente y se enviará al recuperar la señal.');
         clearDraft(`form2-${opportunityId}`);
         if (onComplete) onComplete();
       } else {
-        toast.error('Error guardando asignación.');
+        toast.error('Error guardando asignación: ' + (error.message || 'Error desconocido'));
       }
     }
   };
@@ -102,13 +149,11 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
           <div>
             <h3 className={styles.stepTitle}>Datos Generales</h3>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Nombre del Hunter *</label>
-              <select name="nombreHunter" value={formData.nombreHunter} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccionar nombre del Hunter</option>
-                {hunters.map(h => (
-                  <option key={h.id} value={h.id}>{h.nombre || h.email}</option>
-                ))}
-              </select>
+              <label className={styles.label}>Nombre del Hunter</label>
+              <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
+                <span>👤</span>
+                <span>{user?.fullName || user?.email || 'Hunter'}</span>
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Ingreso *</label>
@@ -188,14 +233,22 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
                 <label><input type="radio" name="esEstreno" value="No" checked={formData.esEstreno === 'No'} onChange={handleChange} required /> No</label>
               </div>
             </div>
-            <div className={styles.formGroup} style={{marginTop: '15px'}}>
-              <label className={styles.label}>Fecha de Montantes y Acometidas</label>
-              <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Fecha de Entrega a Propietarios</label>
-              <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} />
-            </div>
+            {formData.esEstreno === 'Sí' && (
+              <>
+                <div className={styles.formGroup} style={{marginTop: '15px'}}>
+                  <label className={styles.label}>Fecha de Montantes y Acometidas *</label>
+                  <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha de Entrega a Propietarios *</label>
+                  <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Inmobiliaria *</label>
+                  <input type="text" name="inmobiliaria" value={formData.inmobiliaria} onChange={handleChange} className={styles.input} required placeholder="Escribir el Nombre de la Inmobiliaria" />
+                </div>
+              </>
+            )}
             <div className={styles.formGroup}>
               <label className={styles.label}>Asignar / Reasignar *</label>
               <select name="asignarReasignar" value={formData.asignarReasignar} onChange={handleChange} className={styles.select} required>

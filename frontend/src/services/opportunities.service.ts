@@ -35,12 +35,12 @@ export const opportunitiesService = {
   },
 
   // Transición de etapa en el Kanban
-  transitionStage: async (id: string, targetStage: number, reason?: string, isValidatedByBO?: boolean) => {
+  transitionStage: async (id: string, targetStage: number, reason?: string, isValidatedByBO?: boolean, towersData?: any[]) => {
     // Le sumamos 1 a targetStage porque en el frontend es índice 0-19 y en DB la position es 1-20
     const position = targetStage + 1;
     return fetchApi(`/opportunities/${id}/stage`, {
       method: 'PATCH',
-      body: JSON.stringify({ toStagePosition: position, reason, isValidatedByBO }),
+      body: JSON.stringify({ toStagePosition: position, reason, isValidatedByBO, towersData }),
     });
   }
 };

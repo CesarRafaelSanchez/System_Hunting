@@ -66,6 +66,13 @@ export const AppRouter = () => {
       <Toaster position="top-right" richColors />
       <SyncManager />
       <Routes>
+        {/* ROOT REDIRECT */}
+        <Route path="/" element={
+          <PublicRoute>
+            <Navigate to="/login" replace />
+          </PublicRoute>
+        } />
+
         {/* RUTAS PÚBLICAS */}
         <Route path="/login" element={
           <PublicRoute>

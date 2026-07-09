@@ -41,7 +41,7 @@ const CardContent = ({ card, role, onActionClick }: { card: any, role: string, o
   const canal = card.canalHunting || 'FUTURA';
   const distrito = p.distrito || '-';
   
-  let totalHogares = p.numeroHogares || 0;
+  let totalHogares = p.totalHogares || p.numeroHogares || 0;
   if (!totalHogares && card.towersData) {
     totalHogares = card.towersData.reduce((acc: number, t: any) => {
       const pisos = parseInt(t.pisos_torre) || 0;
@@ -139,7 +139,7 @@ const CardContent = ({ card, role, onActionClick }: { card: any, role: string, o
 
 function SortableCard({ id, card, onClick, isDragDisabled, isDragOverlay, role, onActionClick }: any) {
   const p = card.property || {};
-  let totalHogares = p.numeroHogares || 0;
+  let totalHogares = p.totalHogares || p.numeroHogares || 0;
   if (!totalHogares && card.towersData) {
     totalHogares = card.towersData.reduce((acc: number, t: any) => {
       const pisos = parseInt(t.pisos_torre) || 0;
@@ -225,7 +225,7 @@ function KanbanColumn({ stageIndex, title, cards, onCardClick, role, onActionCli
   const headerStyles = getHeaderStyles(stageIndex);
 
   return (
-    <div ref={colRef} className={`flex-shrink-0 flex flex-col rounded-xl transition-all duration-300 border-none overflow-hidden ${isCollapsed ? `w-14 h-full ${headerStyles}` : 'w-80 max-h-full bg-transparent'}`}>
+    <div ref={colRef} className={`flex-shrink-0 flex flex-col rounded-xl transition-all duration-300 border-none overflow-hidden ${isCollapsed ? `w-14 h-full ${headerStyles}` : 'w-80 h-full bg-transparent'}`}>
       <div className={`p-3 flex justify-between items-center sticky top-0 z-10 ${isCollapsed ? 'bg-transparent' : `${headerStyles} rounded-xl mb-3`}`}>
         {!isCollapsed && <h3 className="font-semibold text-sm truncate pr-2" title={title}>{title}</h3>}
         
@@ -581,7 +581,7 @@ export const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="flex flex-col relative bg-white rounded-xl border border-gray-200 shadow-sm h-[calc(100vh-112px)] overflow-hidden">
       <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-30">
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -801,7 +801,7 @@ export const KanbanBoard: React.FC = () => {
           </DndContext>
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-x-auto">
           <OpportunitiesTable 
             cards={filteredAndSortedCards} 
             STAGES={STAGES} 
@@ -814,18 +814,27 @@ export const KanbanBoard: React.FC = () => {
         <OpportunitySplitView 
           card={selectedCard} 
           onClose={() => setSelectedCard(null)} 
+          onSave={() => {
+            fetchCards();
+          }}
           onApprove={async (towersData) => {
             const currentStage = selectedCard.stage;
             let targetStage = currentStage;
-            if (currentStage === 5) targetStage = 6; // Validación BO -> Solicitud Enviada a WIN
-            else if (currentStage === 13) targetStage = 14; // Validación BO 2 -> Ficha de Datos Enviada a WIN
+            if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetStage = 6;
+            else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetStage = 14;
             
             if (targetStage !== currentStage) {
               const originalStage = currentStage;
               setCards(cards.map(c => c.id === selectedCard.id ? { ...c, stage: targetStage } : c));
               try {
                 const { opportunitiesService } = await import('../../services/opportunities.service');
-                await opportunitiesService.transitionStage(String(selectedCard.id), targetStage, towersData ? { towersData } as any : undefined, true);
+                await opportunitiesService.transitionStage(
+                  String(selectedCard.id), 
+                  targetStage, 
+                  'Aprobación y transición por Validación Back Office', 
+                  true, 
+                  towersData
+                );
                 toast.success('¡Validación aprobada y enviada al proceso asíncrono!');
                 
                 setTimeout(() => {

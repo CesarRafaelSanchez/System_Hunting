@@ -61,4 +61,12 @@ export class OpportunitiesController {
   async getExportStatus(@Param('id') id: string) {
     return this.opportunitiesService.getExportStatus(id);
   }
+
+  @Get(':id/submissions')
+  async getSubmissions(
+    @Param('id') id: string,
+    @Request() req: any
+  ) {
+    return this.opportunitiesService.getSubmissions(id, req.user);
+  }
 }

@@ -92,7 +92,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
               
               const direccionCompleta = [p.tipoVia, p.nombreVia, p.numeroVia].filter(Boolean).join(' ');
               const totalTorres = p.numeroTorres || (c.towersData ? c.towersData.length : '-');
-              const totalHps = p.numeroHogares || (c.towersData ? c.towersData.reduce((acc: number, t: any) => {
+              const totalHps = p.totalHogares || p.numeroHogares || (c.towersData ? c.towersData.reduce((acc: number, t: any) => {
                 const pisos = parseInt(t.pisos_torre) || 0;
                 if (!t.hogares_por_piso) return acc;
                 if (t.hogares_por_piso.includes(',')) {

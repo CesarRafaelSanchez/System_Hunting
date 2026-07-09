@@ -38,12 +38,15 @@ export class PrediosService {
   }
 
   async createPredio(user: any, dto: CreatePredioDto, manager: EntityManager) {
+    console.log('[createPredio] Received DTO in backend:', JSON.stringify(dto));
     // ── 1. Resolver el UUID del distrito desde su nombre ──────────────────────
     const distritoNombre = dto.distrito?.trim();
     if (!distritoNombre) {
       throw new BadRequestException('El campo distrito es requerido.');
     }
-    let distrito = await manager.findOne(Distrito, { where: { nombre: distritoNombre } });
+    let distrito = await manager.createQueryBuilder(Distrito, 'd')
+      .where('LOWER(TRIM(d.nombre)) = LOWER(TRIM(:nombre))', { nombre: distritoNombre })
+      .getOne();
     if (!distrito) {
       // Si no existe aún en la BD, lo creamos dinámicamente
       distrito = manager.create(Distrito, { nombre: distritoNombre });
@@ -64,6 +67,15 @@ export class PrediosService {
 
     // ── 3. Crear el Predio mapeando campos del formulario ─────────────────────
     const totalHPs = parseInt(dto.numeroHPs as string, 10) || 0;
+    
+    const tipoClean = (dto.tipoVia || 'AV.').trim();
+    let direccionClean = (dto.direccion || '').trim();
+    const removeAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const normTipo = removeAccents(tipoClean);
+    while (tipoClean && removeAccents(direccionClean).startsWith(normTipo)) {
+      direccionClean = direccionClean.substring(tipoClean.length).trim();
+    }
+
     const predio = manager.create(Predio, {
       companyId: user.companyId,
       nombreProyecto: dto.nombreEdificio,          // nombreEdificio → nombreProyecto
@@ -73,8 +85,8 @@ export class PrediosService {
       estadoConstruccion: dto.estadoConstruccion || 'EN_CONSTRUCCION',
       juntaDirectiva: dto.juntaDirectiva || 'NO',
       distritoId: distrito.id,
-      tipoVia: dto.tipoVia || 'AV.',
-      nombreVia: dto.direccion,                    // direccion → nombreVia
+      tipoVia: tipoClean,
+      nombreVia: direccionClean,                    // direccion → nombreVia
       numeracionMunicipal: dto.numeracionMunicipal || 'S/N',
       totalTorres: 1,
       totalHogares: totalHPs,
@@ -83,9 +95,13 @@ export class PrediosService {
 
     // Coordenadas opcionales: "lat, lng" → point(lon, lat)
     if (dto.coordenadas) {
-      const parts = dto.coordenadas.split(',').map(s => parseFloat(s.trim()));
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        predio.coordenadasGps = `(${parts[1]},${parts[0]})`;
+      const match = dto.coordenadas.match(/(-?\d+(?:\.\d+)?)\s*[,\s;\/]*\s*(-?\d+(?:\.\d+)?)/);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          predio.coordenadasGps = { x: lng, y: lat };
+        }
       }
     }
 
@@ -113,7 +129,24 @@ export class PrediosService {
       pipelineId: pipeline.id,          // UUID real de la BD
       currentStageEnteredAt: new Date(),
     });
-    await manager.save(opportunity);
+    const savedOpportunity = await manager.save(opportunity);
+
+    // Guardar el Génesis (Form 1) en form_submissions
+    try {
+      await manager.query(
+        `INSERT INTO form_submissions (form_id, company_id, opportunity_id, property_id, submitted_by_user_id, status, raw_payload_json)
+         SELECT id, $1, $2, $3, $4, 'SUBMITTED', $5::jsonb
+         FROM forms WHERE code = 'FORM_REGISTRO_PREDIO'
+         LIMIT 1`,
+        [user.companyId, savedOpportunity.id, savedPredio.id, user.id, JSON.stringify({
+          resultadoVisita: dto.resultadoVisita,
+          detalle: dto.detalle,
+          ejecutivo: user.fullName
+        })]
+      );
+    } catch (e) {
+      console.warn('[createPredio] form_submissions genesis insert skipped:', e.message);
+    }
 
     return savedPredio;
   }
@@ -136,7 +169,7 @@ export class PrediosService {
     });
 
     if (dto.latitude && dto.longitude) {
-      predio.coordenadasGps = `(${dto.longitude},${dto.latitude})`;
+      predio.coordenadasGps = { x: dto.longitude, y: dto.latitude };
     }
 
     // Reestructurar Torres y Pisos si vienen en el payload (Manejo de Cascada Físico)
