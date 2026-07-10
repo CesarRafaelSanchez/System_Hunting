@@ -57,7 +57,7 @@ export const ValidacionExpedientes: React.FC = () => {
   const currentData = getFilteredData();
 
   return (
-    <div className="h-full flex flex-col relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="flex flex-col relative bg-white rounded-xl border border-gray-200 shadow-sm">
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Validación de Expedientes</h2>
         <p className="text-gray-500 text-sm">Auditoría centralizada de asignaciones y fichas técnicas enviadas por campo.</p>
@@ -164,15 +164,25 @@ export const ValidacionExpedientes: React.FC = () => {
         <OpportunitySplitView 
           card={selectedCard} 
           onClose={() => setSelectedCard(null)} 
+          onSave={() => {
+            fetchOpps();
+          }}
           onApprove={async (towersData) => {
             const currentStage = selectedCard.stage;
             let targetStage = currentStage;
-            if (currentStage === 5 || currentStage === 4) targetStage = 6;
-            else if (currentStage === 12 || currentStage === 13) targetStage = 14;
+            if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetStage = 6;
+            else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetStage = 14;
             
             if (targetStage !== currentStage) {
               try {
-                await opportunitiesService.transitionStage(String(selectedCard.id), targetStage, towersData ? { towersData } as any : undefined, true);
+                const { opportunitiesService } = await import('../../services/opportunities.service');
+                await opportunitiesService.transitionStage(
+                  String(selectedCard.id), 
+                  targetStage, 
+                  'Aprobación y transición por Validación Back Office', 
+                  true, 
+                  towersData
+                );
                 toast.success('¡Expediente aprobado y enviado a WIN!');
                 fetchOpps();
               } catch (error) {

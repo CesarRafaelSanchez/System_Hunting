@@ -12,6 +12,30 @@ import { Piso } from '../database/entities/piso.entity';
 import { ConfiguracionSistema } from '../database/entities/configuracion-sistema.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Predio } from '../database/entities/predio.entity';
+import { Distrito } from '../database/entities/distrito.entity';
+
+const parseBackendDate = (val: string) => {
+  if (!val || val === '-') return null;
+  
+  // If format is "YYYY-MM-DD"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return new Date(val);
+  }
+  
+  // If format is "DD/MM/YYYY" or "D/M/YYYY"
+  const match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const d = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10) - 1; // 0-indexed month
+    const y = parseInt(match[3], 10);
+    return new Date(y, m, d);
+  }
+  
+  // Fallback to native constructor
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 @Injectable()
 export class OpportunitiesService {
@@ -90,7 +114,10 @@ export class OpportunitiesService {
         currentStage: true,
         property: {
           distrito: true,
-          hunterPrincipal: true
+          hunterPrincipal: true,
+          torres: {
+            pisos: true
+          }
         },
         currentOwnerUser: true
       }
@@ -112,18 +139,212 @@ export class OpportunitiesService {
   }
 
   async updateOpportunity(id: string, user: any, dto: any, manager: EntityManager) {
-    const opp = await manager.findOne(Opportunity, { where: { id, companyId: user.companyId } });
-    if (!opp) throw new NotFoundException('Not found');
-    
-    // Guardamos datos JSON extra en algún campo de metadata si existiera, o actualizamos.
-    // MVP: solo retornamos OK
+    const opp = await manager.findOne(Opportunity, {
+      where: { id, companyId: user.companyId },
+      relations: { property: true },
+    });
+    if (!opp) throw new NotFoundException('Oportunidad no encontrada.');
+
+    // ── Actualizar campos del Predio con los datos del formulario ─────────────────
+    if (opp.property && dto) {
+      const predio = opp.property;
+
+       // Campos comunes a Form2 y Form3
+      if (dto.nombreProyecto && dto.nombreProyecto !== '-')   predio.nombreProyecto   = dto.nombreProyecto;
+      if (dto.tipoVia && dto.tipoVia !== '-')          predio.tipoVia          = dto.tipoVia;
+      if (dto.nombreVia && dto.nombreVia !== '-') {
+        let nombreClean = dto.nombreVia.trim();
+        const tipoClean = (dto.tipoVia || predio.tipoVia || '').trim();
+        const removeAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const normTipo = removeAccents(tipoClean);
+        while (tipoClean && removeAccents(nombreClean).startsWith(normTipo)) {
+          nombreClean = nombreClean.substring(tipoClean.length).trim();
+        }
+        predio.nombreVia = nombreClean;
+      }
+      if (dto.numeracionesVia && dto.numeracionesVia !== '-')  predio.numeracionMunicipal = dto.numeracionesVia;
+      if (dto.numeracionVia && dto.numeracionVia !== '-')    predio.numeracionMunicipal = dto.numeracionVia;
+      
+      if (dto.fechaEntrega && dto.fechaEntrega !== '-') {
+        const parsed = parseBackendDate(dto.fechaEntrega);
+        if (parsed) predio.fechaEntrega = parsed;
+      }
+      if (dto.fechaMontantes && dto.fechaMontantes !== '-') {
+        const parsed = parseBackendDate(dto.fechaMontantes);
+        if (parsed) predio.terminoMontantes = parsed;
+      }
+
+      if (dto.horarioVisita && dto.horarioVisita !== '-')    predio.horarioVisita    = dto.horarioVisita;
+      if (dto.urbanizacion && dto.urbanizacion !== '-')     predio.urbanizacionZona = dto.urbanizacion;
+      if (dto.codigoPostal && dto.codigoPostal !== '-')     predio.codigoPostal     = dto.codigoPostal;
+      if (dto.clientesInteresados && dto.clientesInteresados !== '-') predio.clientesInteresados = parseInt(dto.clientesInteresados, 10) || 0;
+
+      // Coordenadas: "lat, lng" -> point(lon, lat)
+      if (dto.coordenadas && dto.coordenadas !== '-') {
+        const match = dto.coordenadas.match(/(-?\d+(?:\.\d+)?)\s*[,\s;\/]*\s*(-?\d+(?:\.\d+)?)/);
+        if (match) {
+          const lat = parseFloat(match[1]);
+          const lng = parseFloat(match[2]);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            predio.coordenadasGps = { x: lng, y: lat };
+          }
+        }
+      }
+
+      // Distrito: resolver por nombre si viene como string
+      if (dto.distrito && typeof dto.distrito === 'string' && dto.distrito !== '-') {
+        let distrito = await manager.createQueryBuilder(Distrito, 'd')
+          .where('LOWER(TRIM(d.nombre)) = LOWER(TRIM(:nombre))', { nombre: dto.distrito.trim() })
+          .getOne();
+        if (!distrito) {
+          distrito = manager.create(Distrito, { nombre: dto.distrito.trim() });
+          await manager.save(distrito);
+        }
+        predio.distritoId = distrito.id;
+      }
+
+      // Hogares y torres
+      if (dto.numeroHPs && dto.numeroHPs !== '-')     predio.totalHogares = parseInt(dto.numeroHPs, 10) || predio.totalHogares;
+      if (dto.totalHogares && dto.totalHogares !== '-')  predio.totalHogares = parseInt(dto.totalHogares, 10) || predio.totalHogares;
+      if (dto.totalTorres && dto.totalTorres !== '-')   predio.totalTorres  = parseInt(dto.totalTorres, 10) || predio.totalTorres;
+
+      // Tipo de edificio y estado
+      if (dto.tipoEdificio && dto.tipoEdificio !== '-')  predio.clasificacionProyecto = dto.tipoEdificio;
+      if (dto.tipoProyecto && dto.tipoProyecto !== '-')  predio.tipoDesarrollo        = dto.tipoProyecto;
+      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno;
+      if (estrenoVal && estrenoVal !== '-')            predio.estadoConstruccion    = estrenoVal;
+      if (dto.juntaDirectiva && dto.juntaDirectiva !== '-') predio.juntaDirectiva       = dto.juntaDirectiva;
+      if (dto.visitaInspeccion && dto.visitaInspeccion !== '-') {
+        const parsed = parseBackendDate(dto.visitaInspeccion);
+        if (parsed) predio.fechaVisitaTecnica = parsed;
+      }
+
+      if (dto.currentOwnerUserId && dto.currentOwnerUserId !== '-') {
+        let userId = dto.currentOwnerUserId.trim();
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+        if (!isUuid) {
+          // Resolve by name or email (exact or partial match)
+          const resolved = await manager.query(
+            `SELECT id FROM users 
+             WHERE LOWER(TRIM(full_name)) = LOWER($1) 
+                OR LOWER(TRIM(email)) = LOWER($1)
+                OR LOWER(full_name) LIKE $2
+                OR LOWER(email) LIKE $2
+             LIMIT 1`,
+            [userId, `%${userId.toLowerCase()}%`]
+          );
+          if (resolved && resolved.length > 0) {
+            userId = resolved[0].id;
+          }
+        }
+        
+        const isValidUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+        if (isValidUuid) {
+          opp.currentOwnerUserId = userId;
+          predio.hunterPrincipalId = userId;
+        }
+      }
+
+      await manager.save(Predio, predio);
+
+      // Save Towers and Floors if present in updateOpportunity
+      if (dto.towersData) {
+        await manager.delete(Torre, { predioId: predio.id });
+        let calculatedTotalHogares = 0;
+        for (const towerInfo of dto.towersData) {
+          const torre = manager.create(Torre, {
+            predioId: predio.id,
+            nombreTorre: towerInfo.nombre_torre || 'Torre Sin Nombre'
+          });
+          const savedTorre = await manager.save(torre);
+          
+          const numPisos = parseInt(towerInfo.pisos_torre, 10) || 1;
+          let hogaresList: number[] = [];
+          if (Array.isArray(towerInfo.hogares_por_piso)) {
+            hogaresList = towerInfo.hogares_por_piso.map((n: any) => parseInt(n, 10) || 0);
+          } else {
+            hogaresList = (towerInfo.hogares_por_piso || '0').toString().split(',').map((n: string) => parseInt(n.trim(), 10) || 0);
+          }
+          
+          for (let i = 1; i <= numPisos; i++) {
+            const hogares = hogaresList[i - 1] !== undefined ? hogaresList[i - 1] : (hogaresList[hogaresList.length - 1] || 0);
+            calculatedTotalHogares += hogares;
+            const piso = manager.create(Piso, {
+              torreId: savedTorre.id,
+              numeroPiso: i,
+              hogaresCantidad: hogares
+            });
+            await manager.save(piso);
+          }
+        }
+        predio.totalTorres = dto.towersData.length;
+        predio.totalHogares = calculatedTotalHogares;
+        await manager.save(Predio, predio);
+      }
+    }
+
+    if (dto) {
+      if (dto.nombreCanal && dto.nombreCanal !== '-') {
+        opp.canalHunting = dto.nombreCanal;
+      }
+      if (dto.canalHunting && dto.canalHunting !== '-') {
+        opp.canalHunting = dto.canalHunting;
+      }
+    }
+
+
+    // ── Guardar el payload JSON en form_submissions (si hay datos) ────────────────
+    if (dto && Object.keys(dto).length > 0) {
+      const formType = dto._formType || 'FORM_GENERIC';
+      try {
+        if (formType === 'FORM_GENERIC') {
+          // Si viene del BackOffice (sin _formType específico), actualizamos las sumisiones existentes
+          const formCodes = ['FORM_ASIGNACION', 'FORM_FICHA_DATOS'];
+          for (const code of formCodes) {
+            const existingSub = await manager.query(
+              `SELECT fs.id, fs.raw_payload_json FROM form_submissions fs
+               JOIN forms f ON fs.form_id = f.id
+               WHERE fs.opportunity_id = $1 AND f.code = $2
+               ORDER BY fs.submitted_at DESC LIMIT 1`,
+              [opp.id, code]
+            );
+            if (existingSub && existingSub.length > 0) {
+              const mergedPayload = {
+                ...(existingSub[0].raw_payload_json || {}),
+                ...dto
+              };
+              await manager.query(
+                `UPDATE form_submissions SET raw_payload_json = $1::jsonb WHERE id = $2`,
+                [JSON.stringify(mergedPayload), existingSub[0].id]
+              );
+            }
+          }
+        }
+
+        await manager.query(
+          `INSERT INTO form_submissions (form_id, company_id, opportunity_id, property_id, submitted_by_user_id, status, raw_payload_json)
+           SELECT id, $2, $3, $4, $5, 'SUBMITTED', $6::jsonb
+           FROM forms WHERE code = $1
+           LIMIT 1`,
+          [formType, user.companyId, opp.id, opp.propertyId, user.id, JSON.stringify(dto)]
+        );
+      } catch (e) {
+        // Si no existe el form configurado, se omite sin romper el flujo
+        console.warn('[updateOpportunity] form_submissions update/insert skipped:', e.message);
+      }
+    }
+
+    opp.lastActivityAt = new Date();
+    await manager.save(opp);
     return opp;
   }
 
   async transitionStage(id: string, user: any, dto: TransitionStageDto, manager: EntityManager) {
-    if (user.role === 'HUNTER') {
-      throw new BadRequestException('Hunters no pueden mover tarjetas manualmente.');
-    }
+    // Hunters solo pueden completar sus propios formularios (4→5 y 12→13)
+    const HUNTER_ALLOWED_TRANSITIONS: Record<number, number[]> = {
+      4: [5],   // Pendiente Form Asignación → Form Asignación Completado
+      12: [13], // Pendiente Form Ficha Datos → Form Ficha Datos Completado
+    };
 
     const opportunity = await manager.findOne(Opportunity, {
       where: { id, companyId: user.companyId }
@@ -151,6 +372,14 @@ export class OpportunitiesService {
 
     if (opportunity.currentStageId === newStage.id) {
       throw new BadRequestException('La oportunidad ya se encuentra en esta etapa.');
+    }
+
+    // Reglas de negocio para HUNTER: solo puede completar sus formularios
+    if (user.role === 'HUNTER') {
+      const allowed = HUNTER_ALLOWED_TRANSITIONS[currentStage.position];
+      if (!allowed || !allowed.includes(newStage.position)) {
+        throw new BadRequestException(`Hunters solo pueden completar los formularios asignados (etapa ${currentStage.position} → ${newStage.position} no permitida).`);
+      }
     }
 
     // Reglas de negocio estrictas para BackOffice / Admin
@@ -209,6 +438,8 @@ export class OpportunitiesService {
     // Save Towers and Floors if present
     if (dto.towersData && opportunity.propertyId) {
       await manager.delete(Torre, { predioId: opportunity.propertyId });
+      let calculatedTotalHogares = 0;
+
       for (const towerInfo of dto.towersData) {
         const torre = manager.create(Torre, {
           predioId: opportunity.propertyId,
@@ -226,6 +457,7 @@ export class OpportunitiesService {
         
         for (let i = 1; i <= numPisos; i++) {
           const hogares = hogaresList[i - 1] !== undefined ? hogaresList[i - 1] : (hogaresList[hogaresList.length - 1] || 0);
+          calculatedTotalHogares += hogares;
           const piso = manager.create(Piso, {
             torreId: savedTorre.id,
             numeroPiso: i,
@@ -234,6 +466,12 @@ export class OpportunitiesService {
           await manager.save(piso);
         }
       }
+
+      // Actualizar totalTorres y totalHogares en el predio
+      await manager.update(Predio, opportunity.propertyId, {
+        totalTorres: dto.towersData.length,
+        totalHogares: calculatedTotalHogares
+      });
     }
 
     // Triggers automáticos y simulación de Workers
@@ -249,7 +487,7 @@ export class OpportunitiesService {
     if (newStage.position === 7) {
       await this.reportQueue.add('send-win-request', { opportunityId: opportunity.id });
     }
-    if (newStage.position === 13) {
+    if (newStage.position === 15) {
       await this.reportQueue.add('generate-excel', { opportunityId: opportunity.id });
     }
 
@@ -329,5 +567,16 @@ export class OpportunitiesService {
     }
 
     return { status: 'processing' };
+  }
+
+  async getSubmissions(id: string, user: any) {
+    return this.opportunitiesRepository.manager.query(
+      `SELECT fs.status, fs.submitted_at, f.code as form_code, fs.raw_payload_json 
+       FROM form_submissions fs
+       JOIN forms f ON fs.form_id = f.id
+       WHERE fs.opportunity_id = $1 AND fs.company_id = $2
+       ORDER BY fs.submitted_at ASC`,
+      [id, user.companyId]
+    );
   }
 }

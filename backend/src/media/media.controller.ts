@@ -1,15 +1,12 @@
-import { Controller, Post, Body, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { MediaService } from './media.service';
-import { SimulateUploadDto } from './dto/simulate-upload.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-
 @UseGuards(AuthGuard('jwt'))
-@UseInterceptors(TransactionAuditInterceptor)
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
@@ -23,5 +20,10 @@ export class MediaController {
     @TransactionManager() manager: EntityManager
   ) {
     return this.mediaService.uploadFile(req.user, file, body, manager);
+  }
+
+  @Get('assets/:entityId')
+  async getAssets(@Param('entityId') entityId: string, @Request() req: any) {
+    return this.mediaService.getAssetsByEntityId(entityId, req.user.companyId);
   }
 }

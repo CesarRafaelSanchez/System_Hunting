@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { MediaAsset } from '../database/entities/media-asset.entity';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,6 +8,8 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class MediaService {
+  constructor(@InjectDataSource() private dataSource: DataSource) {}
+
   async uploadFile(user: any, file: any, body: any, manager: EntityManager) {
     if (!file) {
       throw new BadRequestException('No se ha subido ningún archivo');
@@ -23,13 +26,15 @@ export class MediaService {
 
     await fs.promises.writeFile(filePath, file.buffer);
 
-    const fileUrl = `http://localhost:3000/uploads/${uniqueFileName}`;
+    const fileUrl = `/api/uploads/${uniqueFileName}`;
     const storageKey = `local/${uniqueFileName}`;
 
     const entityType = body.entityType || 'GENERAL';
     const entityId = body.entityId || randomUUID();
     const category = body.category || 'GENERAL';
     const mediaType = body.mediaType || 'IMAGE';
+    const latitude = body.latitude ? parseFloat(body.latitude) : null;
+    const longitude = body.longitude ? parseFloat(body.longitude) : null;
 
     const asset = manager.create(MediaAsset, {
       companyId: user.companyId,
@@ -43,6 +48,8 @@ export class MediaService {
       fileSize: file.size,
       fileUrl,
       storageKey,
+      latitude,
+      longitude,
       takenAt: new Date()
     });
 
@@ -50,7 +57,24 @@ export class MediaService {
     return {
       id: savedAsset.id,
       url: savedAsset.fileUrl,
-      fileName: savedAsset.fileName
+      fileName: savedAsset.fileName,
+      ...savedAsset
     };
+  }
+
+  async getAssetsByEntityId(entityId: string, companyId: string) {
+    const repo = this.dataSource.getRepository(MediaAsset);
+    const assets = await repo.find({
+      where: { entityId, companyId },
+      order: { takenAt: 'DESC' }
+    });
+    // Return both url and fileUrl for frontend compatibility, rewriting old localhost:3000 URLs to local proxy paths
+    return assets.map(a => {
+      let url = a.fileUrl;
+      if (url && url.startsWith('http://localhost:3000/uploads/')) {
+        url = url.replace('http://localhost:3000/uploads/', '/api/uploads/');
+      }
+      return { ...a, fileUrl: url, url };
+    });
   }
 }

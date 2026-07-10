@@ -11,7 +11,6 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
-  const [hunters, setHunters] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -51,23 +50,62 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
   const [exportSuccessUrl, setExportSuccessUrl] = useState('');
 
   useEffect(() => {
-    const fetchHunters = async () => {
+    const fetchOpportunityData = async () => {
+      const draft = getDraft(`form3-${opportunityId}`);
+      if (draft) {
+        setFormData(draft.formData || formData);
+        setTowers(draft.towers || towers);
+        return;
+      }
+
+      if (!opportunityId) return;
+
       try {
         const { fetchApi } = await import('../../services/api.client');
-        const res = await fetchApi<any[]>('/users?role=HUNTER');
-        setHunters(res);
+        const res = await fetchApi<any[]>('/opportunities');
+        const opp = res.find((o: any) => o.id === opportunityId);
+        if (opp && opp.property) {
+          const prop = opp.property;
+          const getCoordinates = () => {
+            const gps = prop.coordenadasGps;
+            if (!gps) return '';
+            if (typeof gps === 'string') return gps.replace(/[()]/g, '');
+            if (typeof gps === 'object' && gps.x !== undefined && gps.y !== undefined) {
+              return `${gps.y}, ${gps.x}`;
+            }
+            return '';
+          };
+
+          setFormData(prev => ({
+            ...prev,
+            nombreCanal: opp.canalHunting || '',
+            ingreso: prop.origenProspeccion || '',
+            nombreProyecto: prop.nombreProyecto || '',
+            tipoProyecto: prop.tipoDesarrollo || '',
+            clasificacion: prop.clasificacionProyecto || '',
+            tipoConstruccion: prop.estadoConstruccion || '',
+            juntaDirectiva: prop.juntaDirectiva || '',
+            horarioVisita: prop.horarioVisita || '',
+            departamento: prop.departamento || 'Lima',
+            provincia: prop.provincia || 'Lima',
+            distrito: prop.distrito || '',
+            urbanizacion: prop.urbanizacionZona || '',
+            codigoPostal: prop.codigoPostal || '',
+            tipoVia: prop.tipoVia || '',
+            nombreVia: prop.nombreVia || '',
+            numeracionVia: prop.numeracionMunicipal || '',
+            coordenadas: getCoordinates(),
+            totalHogares: prop.totalHogares?.toString() || '',
+            totalTorres: prop.totalTorres?.toString() || '1',
+          }));
+        }
       } catch (e) {
-        if (user) setHunters([user]);
+        console.error('Error pre-filling Form3', e);
       }
     };
-    fetchHunters();
 
-    const draft = getDraft(`form3-${opportunityId}`);
-    if (draft) {
-      setFormData(draft.formData || formData);
-      setTowers(draft.towers || towers);
-    }
-  }, [getDraft, user, opportunityId]);
+    fetchOpportunityData();
+  }, [getDraft, opportunityId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
@@ -118,14 +156,22 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
       const compressedFile = await compressImage(file, 1600, 1600, 0.8);
       
       const formDataUpload = new FormData();
-      formDataUpload.append('file', compressedFile);
+      formDataUpload.append('file', compressedFile, file.name);
+      // Required metadata fields for the backend
+      formDataUpload.append('entityType', 'OPPORTUNITY');
+      formDataUpload.append('entityId', opportunityId || '');
+      formDataUpload.append('category', fieldName === 'fotoEdificioUrl' ? 'FACHADA' : 'MONTANTES');
+      formDataUpload.append('fileName', file.name);
+      formDataUpload.append('mimeType', file.type || 'image/jpeg');
+      formDataUpload.append('mediaType', file.type?.startsWith('image/') ? 'IMAGE' : 'DOCUMENT');
+      formDataUpload.append('fileSize', String(compressedFile.size || file.size));
 
       const { fetchApi } = await import('../../services/api.client');
       const res = await fetchApi<any>('/media/upload', { 
         method: 'POST',
         body: formDataUpload
       });
-      const url = res.url;
+      const url = res.url || res.fileUrl;
       
       handleChange({ target: { name: fieldName, value: url } } as any);
       toast.success('Archivo comprimido y subido con éxito');
@@ -136,6 +182,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     }
   };
 
+
   const nextStep = () => setStep(s => s + 1);
   const prevStep = () => setStep(s => s - 1);
 
@@ -144,62 +191,49 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     
     // Auto-calculamos totales
     const totalTorres = towers.length;
-    const totalHogares = towers.reduce((acc, t) => acc + t.hogares_por_piso.reduce((sum, h) => sum + h, 0), 0);
+    const totalHogares = towers.reduce((acc, t) => acc + t.hogares_por_piso.reduce((sum: number, h: number) => sum + h, 0), 0);
     const finalFormData = { ...formData, totalTorres: totalTorres.toString(), totalHogares: totalHogares.toString() };
 
     try {
-      setIsExporting(true);
       const { opportunitiesService } = await import('../../services/opportunities.service');
-      const { fetchApi } = await import('../../services/api.client');
       
-      await opportunitiesService.transitionStage(opportunityId || '', 13, { 
-        reason: 'Ficha de datos completada', 
-        form3Data: finalFormData,
-        towersData: towers 
-      } as any);
-      
-      toast.success('Ficha Técnica enviada. Procesando reporte...');
+      // 1. Guardar datos del formulario en el backend (actualiza el predio + guarda submission)
+      if (opportunityId) {
+        await opportunitiesService.updateForms(opportunityId, {
+          ...finalFormData,
+          _formType: 'FORM_FICHA_DATOS',
+          towersData: towers,
+        } as any);
+      }
+
+      // 2. Transición de etapa: 12 → 13 (Form Ficha Datos Completado)
+      await opportunitiesService.transitionStage(
+        opportunityId || '',
+        12,
+        'Ficha de datos completada',
+        false,
+        towers
+      );
+
+      toast.success('Ficha de Datos guardada y enviada a validación de Back Office.');
       clearDraft(`form3-${opportunityId}`);
       
-      // Polling export status
-      const checkStatus = async () => {
-        try {
-          const res = await fetchApi<any>(`/opportunities/${opportunityId}/export-status`);
-          if (res.status === 'completed') {
-            setIsExporting(false);
-            setExportSuccessUrl(res.url);
-            toast.success('¡Reporte generado con éxito!');
-            if (onComplete) onComplete(); // Opcional, o forzar al usuario a descargar primero
-          } else if (res.status === 'failed') {
-            setIsExporting(false);
-            toast.error('Error al generar el reporte en Python');
-          } else {
-            setTimeout(checkStatus, 3000);
-          }
-        } catch (e) {
-          setIsExporting(false);
-          toast.error('Error sondeando reporte');
-        }
-      };
-      
-      setTimeout(checkStatus, 2000);
+      if (onComplete) {
+        onComplete();
+      }
       
     } catch (error: any) {
       setIsExporting(false);
-      if (error.message === 'Failed to fetch' || error.message.includes('NetworkError') || !navigator.onLine) {
-        await addToSyncQueue(`/opportunities/${opportunityId}/transition`, 'POST', { 
-          stageId: 13, 
-          payload: { 
-            reason: 'Ficha de datos completada', 
-            form3Data: finalFormData,
-            towersData: towers 
-          }
+      if (!navigator.onLine || error.message === 'Failed to fetch' || error.message?.includes('NetworkError')) {
+        await addToSyncQueue(`/opportunities/${opportunityId}/stage`, 'PATCH', { 
+          toStagePosition: 13, 
+          reason: 'Ficha de datos completada', 
         });
         toast.warning('Sin conexión. Los datos se guardaron localmente y se enviarán automáticamente al recuperar la señal.');
         clearDraft(`form3-${opportunityId}`);
         if (onComplete) onComplete();
       } else {
-        toast.error('Error enviando ficha técnica.');
+        toast.error('Error enviando ficha técnica: ' + (error.message || 'Error desconocido'));
       }
     }
   };
@@ -259,11 +293,11 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
               </select>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Nombre del Hunter *</label>
-              <select name="nombreHunter" value={formData.nombreHunter} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir al Ejecutivo</option>
-                {hunters.map(h => <option key={h.id} value={h.id}>{h.nombre || h.email}</option>)}
-              </select>
+              <label className={styles.label}>Nombre del Hunter</label>
+              <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
+                <span>👤</span>
+                <span>{user?.fullName || user?.email || 'Hunter'}</span>
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del Proyecto/Edificio *</label>
