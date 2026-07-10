@@ -37,7 +37,7 @@ export class MediaService {
     const longitude = body.longitude ? parseFloat(body.longitude) : null;
 
     const asset = manager.create(MediaAsset, {
-      companyId: user.companyId,
+      companyId: user.companyId || '',
       entityType,
       entityId,
       uploadedByUserId: user.id,
@@ -51,14 +51,12 @@ export class MediaService {
       latitude,
       longitude,
       takenAt: new Date()
-    });
+    } as any);
 
     const savedAsset = await manager.save(asset);
     return {
-      id: savedAsset.id,
-      url: savedAsset.fileUrl,
-      fileName: savedAsset.fileName,
-      ...savedAsset
+      ...savedAsset,
+      url: savedAsset.fileUrl
     };
   }
 

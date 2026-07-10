@@ -6,8 +6,8 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid', name: 'company_id' })
-  companyId: string;
+  @Column({ type: 'uuid', name: 'company_id', nullable: true })
+  companyId: string | null;
 
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })

@@ -6,7 +6,7 @@ interface UserData {
   email: string;
   fullName: string;
   role: 'HUNTER' | 'BACKOFFICE' | 'ADMIN';
-  companyId: string;
+  companyId: string | null;
 }
 
 interface AuthState {
@@ -19,6 +19,7 @@ interface AuthState {
   logout: () => void;
   impersonate: (token: string, user: UserData) => void;
   restoreImpersonation: () => void;
+  updateUser: (token: string, user: UserData) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
         originalToken: null,
         originalUser: null
       })),
+      updateUser: (token, user) => set({ token, user }),
     }),
     {
       name: 'auth-storage', // Clave en localStorage

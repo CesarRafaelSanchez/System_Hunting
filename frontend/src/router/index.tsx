@@ -14,6 +14,7 @@ import { UserManagement } from '../views/admin/UserManagement';
 import { DashboardView } from '../views/dashboard/DashboardView';
 import { ValidacionExpedientes } from '../views/backoffice/ValidacionExpedientes';
 import { SyncManager } from '../components/SyncManager';
+import { CompanySetupView } from '../views/auth/CompanySetupView';
 
 // --- GUARDS DE RUTAS ---
 
@@ -23,6 +24,11 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   if (!isAuthenticated || !user || !user.role) {
     if (isAuthenticated) logout(); // Limpiar estado corrupto
     return <Navigate to="/login" replace />;
+  }
+
+  // Si no tiene empresa asociada, redirigir obligatoriamente al onboarding
+  if (!user.companyId) {
+    return <Navigate to="/setup-company" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -42,6 +48,9 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, user, logout } = useAuthStore();
   
   if (isAuthenticated && user && user.role) {
+    if (!user.companyId) {
+      return <Navigate to="/setup-company" replace />;
+    }
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
     if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
@@ -49,6 +58,25 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     logout();
   }
   
+  return <>{children}</>;
+};
+
+const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Si el usuario ya tiene una empresa, redirigir al CRM normal
+  if (user.companyId) {
+    if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
+    if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
+    if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
+    logout();
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -78,6 +106,13 @@ export const AppRouter = () => {
           <PublicRoute>
             <LoginView />
           </PublicRoute>
+        } />
+
+        {/* ONBOARDING */}
+        <Route path="/setup-company" element={
+          <OnboardingRoute>
+            <CompanySetupView />
+          </OnboardingRoute>
         } />
 
         {/* LAYOUT MAESTRO (Protegido por Role) */}

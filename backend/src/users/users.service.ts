@@ -1,9 +1,11 @@
-import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../database/entities/user.entity';
 import { Company } from '../database/entities/company.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService implements OnApplicationBootstrap {
@@ -18,22 +20,11 @@ export class UsersService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     try {
-      const usersCount = await this.userRepository.count();
-      if (usersCount === 0) {
-        this.logger.log('No users found in database. Initializing first super admin...');
-        
-        // 1. Ensure at least one company exists
-        let defaultCompany = await this.companyRepository.findOne({ where: {} });
-        if (!defaultCompany) {
-          defaultCompany = this.companyRepository.create({
-            name: 'Sede Principal',
-            slug: 'sede-principal'
-          });
-          defaultCompany = await this.companyRepository.save(defaultCompany);
-          this.logger.log('Created default company: Sede Principal');
-        }
+      const userCount = await this.userRepository.count();
+      if (userCount === 0) {
+        this.logger.log('No users found in database. Initializing initial admin (without company)...');
 
-        // 2. Read env vars
+        // 1. Read env vars
         const adminEmail = process.env.INITIAL_ADMIN_EMAIL;
         const adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
         const adminName = process.env.INITIAL_ADMIN_NAME || 'Super Admin';
@@ -43,41 +34,95 @@ export class UsersService implements OnApplicationBootstrap {
           return;
         }
 
-        // 3. Hash password and create admin
-        const salt = await bcrypt.genSalt();
-        const passwordHash = await bcrypt.hash(adminPassword, salt);
-
+        // 2. Create admin user (companyId is null)
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
         const admin = this.userRepository.create({
-          email: adminEmail,
+          companyId: null,
           fullName: adminName,
-          passwordHash: passwordHash,
+          email: adminEmail,
+          passwordHash: hashedPassword,
           role: 'ADMIN',
-          companyId: defaultCompany.id,
-          isActive: true
+          isActive: true,
         });
 
         await this.userRepository.save(admin);
-        this.logger.log(`Successfully created initial admin: ${adminEmail}`);
+        this.logger.log(`Initial admin created successfully: ${adminEmail}`);
       }
-    } catch (error) {
-      this.logger.error('Error during initial admin setup', error);
+    } catch (e) {
+      this.logger.error('Error creating initial admin during bootstrap', e);
     }
   }
 
   async findAll() {
     return this.userRepository.find({
+      relations: {
+        company: true
+      },
       select: {
         id: true,
         fullName: true,
         email: true,
         role: true,
         isActive: true,
-        createdAt: true
+        createdAt: true,
+        company: {
+          id: true,
+          name: true,
+          slug: true
+        }
       },
       order: {
         role: 'ASC',
         fullName: 'ASC'
       }
     });
+  }
+
+  async create(dto: CreateUserDto) {
+    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (existing) {
+      throw new BadRequestException('El correo ya está registrado por otro usuario');
+    }
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = this.userRepository.create({
+      fullName: dto.fullName,
+      email: dto.email,
+      passwordHash: hashedPassword,
+      role: dto.role,
+      companyId: dto.companyId,
+      isActive: true
+    });
+    return this.userRepository.save(user);
+  }
+
+  async update(id: string, dto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (existing && existing.id !== id) {
+      throw new BadRequestException('El correo ya está registrado por otro usuario');
+    }
+
+    user.fullName = dto.fullName;
+    user.email = dto.email;
+    user.role = dto.role;
+    user.companyId = dto.companyId;
+
+    if (dto.password) {
+      user.passwordHash = await bcrypt.hash(dto.password, 10);
+    }
+
+    return this.userRepository.save(user);
+  }
+
+  async toggleStatus(id: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    user.isActive = !user.isActive;
+    return this.userRepository.save(user);
   }
 }

@@ -49,6 +49,9 @@ services:
       - GOOGLE_SHEETS_SHEET_NAME=${GOOGLE_SHEETS_SHEET_NAME}
       # Montamos el credential al contenedor
       - GOOGLE_SERVICE_ACCOUNT_FILE=/app/credentials/service_account.json
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+      - INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME}
     volumes:
       - ./credentials:/app/credentials:ro
     ports:
