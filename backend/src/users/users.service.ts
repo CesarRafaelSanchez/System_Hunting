@@ -78,6 +78,10 @@ export class UsersService implements OnApplicationBootstrap {
     });
   }
 
+  async findOne(id: string) {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
   async create(dto: CreateUserDto) {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) {

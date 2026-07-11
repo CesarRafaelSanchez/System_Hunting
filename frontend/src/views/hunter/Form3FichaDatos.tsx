@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useFormStore } from '../../store/useFormStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LIMA_DISTRITOS } from '../../utils/constants';
 import { compressImage } from '../../utils/imageUtils';
 import { addToSyncQueue } from '../../utils/indexedDB';
+import { fetchApi } from '../../services/api.client';
 import styles from './FormWizard.module.css';
 import { toast } from 'sonner';
 
@@ -11,17 +11,22 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
+  const isPublic = !user;
   const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     nombreCanal: '',
     ingreso: '',
+    hunterReferido: '',
     nombreHunter: user?.id || '',
     nombreProyecto: '',
     tipoProyecto: '',
     fuente: '',
     clasificacion: '',
     tipoConstruccion: '',
+    fechaEntrega: '',
+    fechaMontantes: '',
+    inmobiliaria: '',
     juntaDirectiva: '',
     cargoResponsable: '',
     nombreResponsable: '',
@@ -61,9 +66,9 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
       if (!opportunityId) return;
 
       try {
-        const { fetchApi } = await import('../../services/api.client');
-        const res = await fetchApi<any[]>('/opportunities');
-        const opp = res.find((o: any) => o.id === opportunityId);
+        const endpoint = isPublic ? `/public/opportunities/${opportunityId}` : '/opportunities';
+        const res = await fetchApi<any>(endpoint);
+        const opp = isPublic ? res : (Array.isArray(res) ? res.find((o: any) => o.id === opportunityId) : (res as any).data?.find((o: any) => o.id === opportunityId));
         if (opp && opp.property) {
           const prop = opp.property;
           const getCoordinates = () => {
@@ -79,11 +84,16 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
           setFormData(prev => ({
             ...prev,
             nombreCanal: opp.canalHunting || '',
-            ingreso: prop.origenProspeccion || '',
+            ingreso: prop.origenProspeccion || prop.ingreso || '',
+            hunterReferido: '', // We don't have the explicit referer field in the prop yet, we leave it ready
+            nombreHunter: user?.id || opp.currentOwnerUserId || '',
             nombreProyecto: prop.nombreProyecto || '',
             tipoProyecto: prop.tipoDesarrollo || '',
             clasificacion: prop.clasificacionProyecto || '',
-            tipoConstruccion: prop.estadoConstruccion || '',
+            tipoConstruccion: prop.estadoConstruccion === 'Sí' ? 'Estreno' : (prop.estadoConstruccion || ''),
+            fechaEntrega: prop.fechaEntrega ? new Date(prop.fechaEntrega).toISOString().split('T')[0] : '',
+            fechaMontantes: prop.terminoMontantes ? new Date(prop.terminoMontantes).toISOString().split('T')[0] : '',
+            inmobiliaria: prop.inmobiliaria || '',
             juntaDirectiva: prop.juntaDirectiva || '',
             horarioVisita: prop.horarioVisita || '',
             departamento: prop.departamento || 'Lima',
@@ -195,25 +205,36 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     const finalFormData = { ...formData, totalTorres: totalTorres.toString(), totalHogares: totalHogares.toString() };
 
     try {
-      const { opportunitiesService } = await import('../../services/opportunities.service');
-      
-      // 1. Guardar datos del formulario en el backend (actualiza el predio + guarda submission)
-      if (opportunityId) {
-        await opportunitiesService.updateForms(opportunityId, {
-          ...finalFormData,
-          _formType: 'FORM_FICHA_DATOS',
-          towersData: towers,
-        } as any);
-      }
+      if (isPublic) {
+        await fetchApi(`/public/opportunities/${opportunityId}/form`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            ...finalFormData,
+            _formType: 'FORM_FICHA_DATOS',
+            towersData: towers
+          })
+        });
+      } else {
+        const { opportunitiesService } = await import('../../services/opportunities.service');
+        
+        // 1. Guardar datos del formulario en el backend (actualiza el predio + guarda submission)
+        if (opportunityId) {
+          await opportunitiesService.updateForms(opportunityId, {
+            ...finalFormData,
+            _formType: 'FORM_FICHA_DATOS',
+            towersData: towers,
+          } as any);
+        }
 
-      // 2. Transición de etapa: 12 → 13 (Form Ficha Datos Completado)
-      await opportunitiesService.transitionStage(
-        opportunityId || '',
-        12,
-        'Ficha de datos completada',
-        false,
-        towers
-      );
+        // 2. Transición de etapa: 12 → 13 (Form Ficha Datos Completado)
+        await opportunitiesService.transitionStage(
+          opportunityId || '',
+          'S13',
+          'Ficha de datos completada',
+          false,
+          towers
+        );
+      }
 
       toast.success('Ficha de Datos guardada y enviada a validación de Back Office.');
       clearDraft(`form3-${opportunityId}`);
@@ -285,23 +306,24 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Ingreso *</label>
-              <select name="ingreso" value={formData.ingreso} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir el Tipo de Ingreso de Ficha</option>
-                <option value="Futura">Futura</option>
-                <option value="Referido">Referido</option>
-                <option value="Novacore">Novacore</option>
-              </select>
+              <input name="ingreso" value={formData.ingreso} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
+            {formData.ingreso === 'Referido' && (
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Hunter Referido *</label>
+                <input name="hunterReferido" value={formData.hunterReferido} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="No especificado" />
+              </div>
+            )}
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del Hunter</label>
               <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
                 <span>👤</span>
-                <span>{user?.fullName || user?.email || 'Hunter'}</span>
+                <span>{formData.nombreHunter || 'Hunter'}</span>
               </div>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del Proyecto/Edificio *</label>
-              <input name="nombreProyecto" value={formData.nombreProyecto} onChange={handleChange} className={styles.input} required placeholder="VERIFICAR SI ESTA BIEN ESCRITO" />
+              <input name="nombreProyecto" value={formData.nombreProyecto} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="VERIFICAR SI ESTA BIEN ESCRITO" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Proyecto *</label>
@@ -335,6 +357,24 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                 <option value="Antiguo">Antiguo</option>
               </select>
             </div>
+            
+            {formData.tipoConstruccion === 'Estreno' && (
+              <div style={{ padding: '15px', backgroundColor: '#f0f9ff', borderRadius: '8px', marginTop: '15px' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#0369a1', fontSize: '14px' }}>Confirmación de Datos Técnicos (Estreno)</h4>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha de Entrega a Propietarios *</label>
+                  <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha de Montantes y Acometidas *</label>
+                  <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Inmobiliaria *</label>
+                  <input type="text" name="inmobiliaria" value={formData.inmobiliaria} onChange={handleChange} className={styles.input} required placeholder="Nombre de la Inmobiliaria" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -371,7 +411,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             <div className={styles.formGroup}>
               <label className={styles.label}>Rango de Horario de Visita *</label>
               <div style={{display:'flex', gap:'15px'}}>
-                <label><input type="radio" name="horarioVisita" value="9 AM a 12 AM" checked={formData.horarioVisita === '9 AM a 12 AM'} onChange={handleChange} required /> 9 AM a 12 AM</label>
+                <label><input type="radio" name="horarioVisita" value="9 AM a 12 PM" checked={formData.horarioVisita === '9 AM a 12 PM' || formData.horarioVisita === '9 AM a 12 AM'} onChange={handleChange} required /> 9 AM a 12 PM</label>
                 <label><input type="radio" name="horarioVisita" value="1 PM A 4 PM" checked={formData.horarioVisita === '1 PM A 4 PM'} onChange={handleChange} required /> 1 PM A 4 PM</label>
               </div>
             </div>
@@ -393,10 +433,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Distrito *</label>
-              <select name="distrito" value={formData.distrito} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir el Distrito</option>
-                {LIMA_DISTRITOS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <input name="distrito" value={formData.distrito} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Urbanización *</label>
@@ -408,25 +445,19 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Vía *</label>
-              <select name="tipoVia" value={formData.tipoVia} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir el tipo de via</option>
-                <option value="Avenida">Avenida</option>
-                <option value="Calle">Calle</option>
-                <option value="Jirón">Jirón</option>
-                <option value="Pasaje">Pasaje</option>
-              </select>
+              <input name="tipoVia" value={formData.tipoVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre de Vía *</label>
-              <input name="nombreVia" value={formData.nombreVia} onChange={handleChange} className={styles.input} required placeholder="Escribir el nombre de la via" />
+              <input name="nombreVia" value={formData.nombreVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir el nombre de la via" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Numeración de Vía *</label>
-              <input name="numeracionVia" value={formData.numeracionVia} onChange={handleChange} className={styles.input} required placeholder="Escribir la numeracion de la via" />
+              <input name="numeracionVia" value={formData.numeracionVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir la numeracion de la via" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Coordenadas *</label>
-              <input name="coordenadas" value={formData.coordenadas} onChange={handleChange} className={styles.input} required placeholder="Colocar las coordenadas exactas EJEM: (-12.1, -77.1)" />
+              <input name="coordenadas" value={formData.coordenadas} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Colocar las coordenadas exactas EJEM: (-12.1, -77.1)" />
             </div>
           </div>
         )}

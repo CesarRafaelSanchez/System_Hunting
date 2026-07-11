@@ -47,23 +47,8 @@ export class ReportProcessor extends WorkerHost {
       throw new Error('Oportunidad no encontrada');
     }
 
-    // Cargar la última ficha de datos del predio
-    const submissions = await manager.query(
-      `SELECT raw_payload_json FROM form_submissions 
-       WHERE opportunity_id = $1 AND form_id = (SELECT id FROM forms WHERE code = 'FORM_FICHA_DATOS' LIMIT 1)
-       ORDER BY created_at DESC LIMIT 1`,
-      [opportunity.id]
-    );
-    const fichaPayload = submissions[0]?.raw_payload_json || {};
-
-    // Cargar el último formulario de asignación
-    const asignacionSubmissions = await manager.query(
-      `SELECT raw_payload_json FROM form_submissions 
-       WHERE opportunity_id = $1 AND form_id = (SELECT id FROM forms WHERE code = 'FORM_ASIGNACION' LIMIT 1)
-       ORDER BY created_at DESC LIMIT 1`,
-      [opportunity.id]
-    );
-    const asignacionPayload = asignacionSubmissions[0]?.raw_payload_json || {};
+    // Ya no usamos form_submissions, tomamos todos los datos del Predio
+    // que fueron guardados por OpportunitiesService
 
     // Formatear coordenadas
     let coordenadasStr = 'N/A';
@@ -143,7 +128,7 @@ export class ReportProcessor extends WorkerHost {
     const direccionStr = `${tipoVia} ${nombreVia} ${numeracion}`.trim() || 'N/A';
 
     // Determinar origen y clasificacion del predio
-    const origenStr = opportunity.property?.origenProspeccion || asignacionPayload.ingreso || 'PROPIO';
+    const origenStr = opportunity.property?.origenProspeccion || opportunity.property?.ingreso || 'PROPIO';
     const totalTorres = opportunity.property?.totalTorres || 1;
     const totalHogares = opportunity.property?.totalHogares || 0;
     const tipoConst = isEstreno ? 'ESTRENO' : (opportunity.property?.clasificacionProyecto || 'MODERNO');
@@ -153,7 +138,7 @@ export class ReportProcessor extends WorkerHost {
       canalHunting: opportunity.canalHunting || 'NOVACORE',
       property: {
         nombreEdificio: opportunity.property?.nombreProyecto || 'Mock Edificio',
-        tipoEdificio: asignacionPayload.tipoEdificio || opportunity.property?.tipoDesarrollo || 'Estreno',
+        tipoEdificio: opportunity.property?.clasificacionProyecto || opportunity.property?.tipoDesarrollo || 'Estreno',
         direccion: direccionStr,
         tipoVia: tipoVia,
         nombreVia: nombreVia,
@@ -163,14 +148,14 @@ export class ReportProcessor extends WorkerHost {
         estreno: estreno,
         fechaMontantes: fechaMontantes,
         fechaEntrega: fechaEntrega,
-        inmobiliaria: isEstreno ? (asignacionPayload.inmobiliaria || 'N/A') : 'N/A',
-        responsable: fichaPayload.nombreResponsable || 'N/A',
-        telefonoResponsable: fichaPayload.telefonoResponsable || 'N/A',
-        cargoResponsable: fichaPayload.cargoResponsable || 'N/A',
-        correoResponsable: fichaPayload.correoResponsable || 'N/A',
-        fechaVisitaTecnica: formatDate(opportunity.property?.fechaVisitaTecnica || fichaPayload.visitaInspeccion),
-        horarioVisita: opportunity.property?.horarioVisita || fichaPayload.horarioVisita || 'N/A',
-        juntaDirectiva: opportunity.property?.juntaDirectiva || fichaPayload.juntaDirectiva || 'No',
+        inmobiliaria: isEstreno ? (opportunity.property?.inmobiliaria || 'N/A') : 'N/A',
+        responsable: opportunity.property?.nombreResponsable || 'N/A',
+        telefonoResponsable: opportunity.property?.telefonoResponsable || 'N/A',
+        cargoResponsable: opportunity.property?.cargoResponsable || 'N/A',
+        correoResponsable: opportunity.property?.correoResponsable || 'N/A',
+        fechaVisitaTecnica: formatDate(opportunity.property?.fechaVisitaTecnica),
+        horarioVisita: opportunity.property?.horarioVisita || 'N/A',
+        juntaDirectiva: opportunity.property?.juntaDirectiva || 'No',
         codigoPostal: opportunity.property?.codigoPostal || '',
         totalTorres: totalTorres,
         totalHogares: totalHogares,
@@ -187,6 +172,10 @@ export class ReportProcessor extends WorkerHost {
 
       this.logger.log('Ejecutando Job de Solicitud de Asignación (Etapa 7) - Sin Excel');
       await this.emailService.sendAssignationRequestEmail(payload);
+      
+      this.logger.log('Correo de asignación enviado, transicionando a Etapa 8...');
+      await this.triggerTransition(manager, opportunity.id, 'S8');
+      
       return { status: 'success', message: 'Correo de asignación enviado correctamente' };
     }
 
@@ -226,6 +215,10 @@ export class ReportProcessor extends WorkerHost {
                    if (payload.canalHunting === 'NOVACORE') {
                      await this.sheetsService.appendRow(payload);
                    }
+                   
+                   this.logger.log('Correo de Ficha y Excel generado, transicionando a Etapa 16...');
+                   await this.triggerTransition(manager, opportunity.id, 'S16');
+                   
                    resolve({ status: 'success', file: result.file });
                 })
                 .catch(err => reject(err));
@@ -243,5 +236,35 @@ export class ReportProcessor extends WorkerHost {
 
     this.logger.warn(`Job name ${job.name} no reconocido`);
     return { status: 'ignored' };
+  }
+
+  /**
+   * Ejecuta la transición de la oportunidad (e.g. S7 -> S8, S15 -> S16)
+   */
+  private async triggerTransition(manager: any, opportunityId: string, toCode: string) {
+    try {
+      const opp = await manager.findOne('Opportunity', { where: { id: opportunityId } });
+      if (!opp) return;
+
+      const newStage = await manager.findOne('PipelineStage', { where: { code: toCode, pipelineId: opp.pipelineId } });
+      if (!newStage) return;
+
+      const oldStageId = opp.currentStageId;
+      opp.currentStageId = newStage.id;
+      opp.currentStageEnteredAt = new Date();
+      opp.lastActivityAt = new Date();
+      await manager.save(opp);
+
+      await manager.insert('OpportunityStageHistory', {
+        opportunityId: opp.id,
+        fromStageId: oldStageId,
+        toStageId: newStage.id,
+        reason: 'Transición Automática tras Worker exitoso',
+        changedByUserId: null
+      });
+      this.logger.log(`Transición exitosa: Oportunidad ${opportunityId} movida a ${toCode}`);
+    } catch (error) {
+      this.logger.error(`Error al intentar transicionar oportunidad ${opportunityId} a ${toCode}: ${error.message}`);
+    }
   }
 }

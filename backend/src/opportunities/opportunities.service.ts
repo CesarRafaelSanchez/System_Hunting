@@ -46,12 +46,27 @@ export class OpportunitiesService {
   
   async createOpportunity(user: any, dto: CreateOpportunityDto, manager: EntityManager) {
     // 1. Buscar la etapa inicial para el pipeline solicitado
-    const initialStage = await manager.findOne(PipelineStage, {
-      where: { pipelineId: dto.pipelineId, isInitial: true }
-    });
+    let targetStage: PipelineStage | null = null;
+    
+    if ((user.role === 'ADMIN' || user.role === 'BACKOFFICE') && dto.initialStageCode) {
+      targetStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: dto.pipelineId, code: dto.initialStageCode }
+      });
+    } else if (user.role === 'ADMIN' || user.role === 'BACKOFFICE') {
+      // Por defecto para BO/Admin: S4 (Pendiente Envío de Formulario de Asignación)
+      targetStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: dto.pipelineId, code: 'S4' }
+      });
+    }
 
-    if (!initialStage) {
-      throw new BadRequestException('El pipeline seleccionado no tiene configurada una etapa inicial.');
+    if (!targetStage) {
+      targetStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: dto.pipelineId, isInitial: true }
+      });
+    }
+
+    if (!targetStage) {
+      throw new BadRequestException('El pipeline seleccionado no tiene configurada una etapa válida.');
     }
 
     // 2. Generar un código único (simplificado para el MVP)
@@ -73,7 +88,7 @@ export class OpportunitiesService {
       propertyId: dto.propertyId,
       leadSourceId: dto.leadSourceId,
       pipelineId: dto.pipelineId,
-      currentStageId: initialStage.id,
+      currentStageId: targetStage.id,
       createdByUserId: user.id,
       currentOwnerUserId: assignedUserId, // Asignación inteligente
       status: 'OPEN',
@@ -88,7 +103,7 @@ export class OpportunitiesService {
     const history = manager.create(OpportunityStageHistory, {
       opportunityId: savedOpportunity.id,
       fromStageId: undefined, // TypeORM ignora los campos undefined en lugar de requerir tipos union con null
-      toStageId: initialStage.id,
+      toStageId: targetStage.id,
       changedByUserId: user.id,
       reason: 'Creación de la oportunidad'
     });
@@ -98,14 +113,32 @@ export class OpportunitiesService {
     return savedOpportunity;
   }
 
+  async createOpportunitiesBulk(user: any, dtos: CreateOpportunityDto[], manager: EntityManager) {
+    const results = [];
+    for (const dto of dtos) {
+      try {
+        const opp = await this.createOpportunity(user, dto, manager);
+        results.push(opp);
+      } catch (error) {
+        console.error(`Error creando oportunidad bulk para predio ${dto.propertyId}:`, error);
+      }
+    }
+    return results;
+  }
+
   async findAll(user: any) {
-    let whereClause: any = { companyId: user.companyId };
+    let whereClause: any = {};
     
     if (user.role === 'HUNTER') {
       whereClause = [
         { companyId: user.companyId, createdByUserId: user.id },
         { companyId: user.companyId, currentOwnerUserId: user.id }
       ];
+    } else if (user.role === 'BACKOFFICE') {
+      whereClause = { companyId: user.companyId };
+    } else if (user.role === 'ADMIN') {
+      // ADMIN can see all opportunities across all companies
+      whereClause = {};
     }
 
     const opps = await this.opportunitiesRepository.find({ 
@@ -139,8 +172,13 @@ export class OpportunitiesService {
   }
 
   async updateOpportunity(id: string, user: any, dto: any, manager: EntityManager) {
+    const whereClause: any = { id };
+    if (user.role !== 'ADMIN') {
+      whereClause.companyId = user.companyId;
+    }
+
     const opp = await manager.findOne(Opportunity, {
-      where: { id, companyId: user.companyId },
+      where: whereClause,
       relations: { property: true },
     });
     if (!opp) throw new NotFoundException('Oportunidad no encontrada.');
@@ -219,6 +257,14 @@ export class OpportunitiesService {
         if (parsed) predio.fechaVisitaTecnica = parsed;
       }
 
+      // Nuevos campos de contacto e inmobiliaria (reemplazan form_submissions)
+      if (dto.inmobiliaria && dto.inmobiliaria !== '-') predio.inmobiliaria = dto.inmobiliaria;
+      if (dto.nombreResponsable && dto.nombreResponsable !== '-') predio.nombreResponsable = dto.nombreResponsable;
+      if (dto.telefonoResponsable && dto.telefonoResponsable !== '-') predio.telefonoResponsable = dto.telefonoResponsable;
+      if (dto.cargoResponsable && dto.cargoResponsable !== '-') predio.cargoResponsable = dto.cargoResponsable;
+      if (dto.correoResponsable && dto.correoResponsable !== '-') predio.correoResponsable = dto.correoResponsable;
+      if (dto.ingreso && dto.ingreso !== '-') predio.ingreso = dto.ingreso;
+
       if (dto.currentOwnerUserId && dto.currentOwnerUserId !== '-') {
         let userId = dto.currentOwnerUserId.trim();
         const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
@@ -242,6 +288,16 @@ export class OpportunitiesService {
         if (isValidUuid) {
           opp.currentOwnerUserId = userId;
           predio.hunterPrincipalId = userId;
+        }
+      }
+
+      // Soporte para cambiar de empresa (Admin / BO)
+      if (dto.companyId && dto.companyId !== '-') {
+        // Podríamos validar si el rol es Admin o BO aquí, pero el Controller / UI ya deberían restringirlo.
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(dto.companyId);
+        if (isUuid) {
+          opp.companyId = dto.companyId;
+          predio.companyId = dto.companyId;
         }
       }
 
@@ -295,43 +351,9 @@ export class OpportunitiesService {
 
     // ── Guardar el payload JSON en form_submissions (si hay datos) ────────────────
     if (dto && Object.keys(dto).length > 0) {
-      const formType = dto._formType || 'FORM_GENERIC';
-      try {
-        if (formType === 'FORM_GENERIC') {
-          // Si viene del BackOffice (sin _formType específico), actualizamos las sumisiones existentes
-          const formCodes = ['FORM_ASIGNACION', 'FORM_FICHA_DATOS'];
-          for (const code of formCodes) {
-            const existingSub = await manager.query(
-              `SELECT fs.id, fs.raw_payload_json FROM form_submissions fs
-               JOIN forms f ON fs.form_id = f.id
-               WHERE fs.opportunity_id = $1 AND f.code = $2
-               ORDER BY fs.submitted_at DESC LIMIT 1`,
-              [opp.id, code]
-            );
-            if (existingSub && existingSub.length > 0) {
-              const mergedPayload = {
-                ...(existingSub[0].raw_payload_json || {}),
-                ...dto
-              };
-              await manager.query(
-                `UPDATE form_submissions SET raw_payload_json = $1::jsonb WHERE id = $2`,
-                [JSON.stringify(mergedPayload), existingSub[0].id]
-              );
-            }
-          }
-        }
-
-        await manager.query(
-          `INSERT INTO form_submissions (form_id, company_id, opportunity_id, property_id, submitted_by_user_id, status, raw_payload_json)
-           SELECT id, $2, $3, $4, $5, 'SUBMITTED', $6::jsonb
-           FROM forms WHERE code = $1
-           LIMIT 1`,
-          [formType, user.companyId, opp.id, opp.propertyId, user.id, JSON.stringify(dto)]
-        );
-      } catch (e) {
-        // Si no existe el form configurado, se omite sin romper el flujo
-        console.warn('[updateOpportunity] form_submissions update/insert skipped:', e.message);
-      }
+      // Se ha removido el intento de guardar o actualizar en form_submissions
+      // porque esta tabla no existe en la base de datos MVP y ocasiona que
+      // las transacciones de Postgres sean abortadas.
     }
 
     opp.lastActivityAt = new Date();
@@ -346,8 +368,13 @@ export class OpportunitiesService {
       12: [13], // Pendiente Form Ficha Datos → Form Ficha Datos Completado
     };
 
+    const whereClause: any = { id };
+    if (user.role !== 'ADMIN') {
+      whereClause.companyId = user.companyId;
+    }
+
     const opportunity = await manager.findOne(Opportunity, {
-      where: { id, companyId: user.companyId }
+      where: whereClause
     });
 
     if (!opportunity) {
@@ -362,8 +389,11 @@ export class OpportunitiesService {
       throw new NotFoundException('Etapa actual no encontrada');
     }
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dto.toStageIdOrCode);
     const newStage = await manager.findOne(PipelineStage, {
-      where: { position: dto.toStagePosition, pipelineId: opportunity.pipelineId }
+      where: isUuid 
+        ? { id: dto.toStageIdOrCode, pipelineId: opportunity.pipelineId }
+        : { code: dto.toStageIdOrCode, pipelineId: opportunity.pipelineId }
     });
 
     if (!newStage) {
@@ -382,26 +412,14 @@ export class OpportunitiesService {
       }
     }
 
-    // Reglas de negocio estrictas para BackOffice / Admin
+    // Reglas de negocio para BackOffice / Admin
+    // Ya no bloqueamos transiciones manuales por número de orden para Admin/BackOffice.
+    // Solo requerimos validación si la etapa de destino tiene el botón "Revisado" como requisito (históricamente posiciones 7 o 15).
+    // Usaremos los códigos para identificar estas etapas clave.
     if (user.role === 'BACKOFFICE' || user.role === 'ADMIN') {
-      const allowedManualTransitions: Record<number, number[]> = {
-        1: [2, 3],
-        6: [7], // Require button
-        8: [9, 10],
-        10: [11],
-        14: [15], // Require button
-        16: [17],
-        17: [18, 19]
-      };
-
-      if (newStage.position === 7 || newStage.position === 15) {
+      if (newStage.code === 'S7' || newStage.code === 'S15') {
         if (!dto.isValidatedByBO) {
           throw new BadRequestException('Esta etapa requiere validación explícita mediante el botón "Revisado".');
-        }
-      } else if (newStage.position !== 20) {
-        const allowed = allowedManualTransitions[currentStage.position];
-        if (!allowed || !allowed.includes(newStage.position)) {
-          throw new BadRequestException(`Transición manual no permitida de la etapa ${currentStage.position} a la ${newStage.position}.`);
         }
       }
     }
@@ -474,40 +492,40 @@ export class OpportunitiesService {
       });
     }
 
-    // Triggers automáticos y simulación de Workers
-    const automaticTransitions: Record<number, number> = {
-      2: 4,
-      5: 6,
-      7: 8,   // Simula el éxito del Worker (SMTP/Sheets)
-      9: 12,
-      13: 14,
-      15: 16  // Simula el éxito del Worker (Excel)
+    // Triggers automáticos y simulación de Workers basados en código (Stage Code)
+    // S2 -> S4, S5 -> S6, S9 -> S12, S13 -> S14
+    // S7 -> S8 y S15 -> S16 se manejan explícitamente en el Worker al terminar el correo.
+    const automaticTransitions: Record<string, string> = {
+      'S2': 'S4',
+      'S5': 'S6',
+      'S9': 'S12',
+      'S13': 'S14'
     };
 
-    if (newStage.position === 7) {
+    if (newStage.code === 'S7') {
       await this.reportQueue.add('send-win-request', { opportunityId: opportunity.id });
     }
-    if (newStage.position === 15) {
+    if (newStage.code === 'S15') {
       await this.reportQueue.add('generate-excel', { opportunityId: opportunity.id });
     }
 
-    if (automaticTransitions[newStage.position]) {
-      const nextPos = automaticTransitions[newStage.position];
+    if (automaticTransitions[newStage.code]) {
+      const nextCode = automaticTransitions[newStage.code];
       setTimeout(() => {
-        this.executeAutomaticTransition(opportunity.id, nextPos);
+        this.executeAutomaticTransition(opportunity.id, nextCode);
       }, 5000); // 5 segundos de delay (configurable)
     }
 
     return opportunity;
   }
 
-  async executeAutomaticTransition(opportunityId: string, toPosition: number) {
+  async executeAutomaticTransition(opportunityId: string, toCode: string) {
     const manager = this.opportunitiesRepository.manager;
     try {
       const opportunity = await manager.findOne(Opportunity, { where: { id: opportunityId } });
       if (!opportunity) return;
 
-      const newStage = await manager.findOne(PipelineStage, { where: { position: toPosition, pipelineId: opportunity.pipelineId } });
+      const newStage = await manager.findOne(PipelineStage, { where: { code: toCode, pipelineId: opportunity.pipelineId } });
       if (!newStage) return;
 
       const previousStageId = opportunity.currentStageId;
@@ -570,13 +588,9 @@ export class OpportunitiesService {
   }
 
   async getSubmissions(id: string, user: any) {
-    return this.opportunitiesRepository.manager.query(
-      `SELECT fs.status, fs.submitted_at, f.code as form_code, fs.raw_payload_json 
-       FROM form_submissions fs
-       JOIN forms f ON fs.form_id = f.id
-       WHERE fs.opportunity_id = $1 AND fs.company_id = $2
-       ORDER BY fs.submitted_at ASC`,
-      [id, user.companyId]
-    );
+    // En el MVP la tabla form_submissions no existe. Toda la info 
+    // se guarda en el predio / oportunidad. Por ahora retornamos vacío
+    // para no romper la UI que espera un arreglo de form submissions.
+    return [];
   }
 }

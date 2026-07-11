@@ -22,4 +22,8 @@ export class CreateOpportunityDto {
   @IsNotEmpty()
   @IsIn(['FUTURA', 'NOVACORE', 'REFERIDO'])
   canalHunting: string;
+
+  @IsString()
+  @IsOptional()
+  initialStageCode?: string;
 }

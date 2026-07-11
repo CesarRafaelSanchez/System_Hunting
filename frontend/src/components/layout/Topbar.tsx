@@ -61,7 +61,7 @@ export const Topbar: React.FC = () => {
       });
       if (data && data.access_token) {
         impersonate(data.access_token, data.user);
-        window.location.href = '/';
+        navigate('/');
       }
     } catch (err) {
       console.error(err);
@@ -81,7 +81,7 @@ export const Topbar: React.FC = () => {
 
   const handleRestoreImpersonation = () => {
     restoreImpersonation();
-    window.location.href = '/';
+    navigate('/');
   };
 
   return (

@@ -12,6 +12,7 @@ import { Opportunity } from '../database/entities/opportunity.entity';
 import { Distrito } from '../database/entities/distrito.entity';
 import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { Pipeline } from '../database/entities/pipeline.entity';
+import { LeadSource } from '../database/entities/lead-source.entity';
 
 @Injectable()
 export class PrediosService {
@@ -58,36 +59,49 @@ export class PrediosService {
     if (!pipeline) {
       throw new BadRequestException('No existe un pipeline configurado.');
     }
-    const initialStage = await manager.findOne(PipelineStage, {
-      where: { pipelineId: pipeline.id, isInitial: true }
-    });
-    if (!initialStage) {
+    
+    let targetStage: PipelineStage | null = null;
+    if (user.role === 'ADMIN' || user.role === 'BACKOFFICE') {
+      const codeToSearch = dto.initialStageCode || 'S4';
+      targetStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: pipeline.id, code: codeToSearch }
+      });
+    }
+
+    if (!targetStage) {
+      targetStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: pipeline.id, isInitial: true }
+      });
+    }
+
+    if (!targetStage) {
       throw new BadRequestException('El pipeline no tiene una etapa inicial configurada.');
     }
 
     // ── 3. Crear el Predio mapeando campos del formulario ─────────────────────
     const totalHPs = parseInt(dto.numeroHPs as string, 10) || 0;
     
-    const tipoClean = (dto.tipoVia || 'AV.').trim();
     let direccionClean = (dto.direccion || '').trim();
-    const removeAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const normTipo = removeAccents(tipoClean);
-    while (tipoClean && removeAccents(direccionClean).startsWith(normTipo)) {
-      direccionClean = direccionClean.substring(tipoClean.length).trim();
-    }
+
+    const assignedCompanyId = (user.role === 'ADMIN' || user.role === 'BACKOFFICE') && dto.companyId 
+      ? dto.companyId 
+      : user.companyId;
 
     const predio = manager.create(Predio, {
-      companyId: user.companyId,
+      companyId: assignedCompanyId,
       nombreProyecto: dto.nombreEdificio,          // nombreEdificio → nombreProyecto
+      direccionExacta: direccionClean,
+      resultadoVisita: dto.resultadoVisita || '-',
+      detalleVisita: dto.detalle || '-',
       tipoDesarrollo: dto.tipoDesarrollo || 'MULTIFAMILIAR',
       origenProspeccion: dto.origenProspeccion || 'TERRENO',
       clasificacionProyecto: dto.clasificacionProyecto || 'PRIMARIO',
       estadoConstruccion: dto.estadoConstruccion || 'EN_CONSTRUCCION',
       juntaDirectiva: dto.juntaDirectiva || 'NO',
       distritoId: distrito.id,
-      tipoVia: tipoClean,
-      nombreVia: direccionClean,                    // direccion → nombreVia
-      numeracionMunicipal: dto.numeracionMunicipal || 'S/N',
+      tipoVia: '-',
+      nombreVia: '-',
+      numeracionMunicipal: '-',
       totalTorres: 1,
       totalHogares: totalHPs,
       hunterPrincipalId: user.id
@@ -116,37 +130,29 @@ export class PrediosService {
     }
 
     // ── 5. Génesis de la Oportunidad en la Etapa Inicial ─────────────────────
+    let leadSource = await manager.findOne(LeadSource, { where: { name: 'Scraping' } });
+    if (!leadSource) {
+      leadSource = manager.create(LeadSource, { id: '00000000-0000-0000-0000-000000000002', name: 'Scraping', code: 'SCR' });
+      await manager.save(leadSource);
+    }
+
     const opportunity = manager.create(Opportunity, {
       code: `OPP-${Date.now().toString().slice(-6)}`,
-      companyId: user.companyId,
+      companyId: assignedCompanyId,
       propertyId: savedPredio.id,
       createdByUserId: user.id,
       currentOwnerUserId: user.id,
       status: 'OPEN',
       canalHunting: 'TERRENO',
-      leadSourceId: '00000000-0000-0000-0000-000000000002', // "Scraping" - único lead source en la BD
-      currentStageId: initialStage.id,  // UUID real de la BD
+      leadSourceId: leadSource.id,
+      currentStageId: targetStage.id,  // UUID real de la BD
       pipelineId: pipeline.id,          // UUID real de la BD
       currentStageEnteredAt: new Date(),
     });
     const savedOpportunity = await manager.save(opportunity);
 
-    // Guardar el Génesis (Form 1) en form_submissions
-    try {
-      await manager.query(
-        `INSERT INTO form_submissions (form_id, company_id, opportunity_id, property_id, submitted_by_user_id, status, raw_payload_json)
-         SELECT id, $1, $2, $3, $4, 'SUBMITTED', $5::jsonb
-         FROM forms WHERE code = 'FORM_REGISTRO_PREDIO'
-         LIMIT 1`,
-        [user.companyId, savedOpportunity.id, savedPredio.id, user.id, JSON.stringify({
-          resultadoVisita: dto.resultadoVisita,
-          detalle: dto.detalle,
-          ejecutivo: user.fullName
-        })]
-      );
-    } catch (e) {
-      console.warn('[createPredio] form_submissions genesis insert skipped:', e.message);
-    }
+    // El guardado del formulario en form_submissions ha sido removido porque
+    // la tabla no existe en el MVP y causa que la transacción de Postgres se aborte.
 
     return savedPredio;
   }

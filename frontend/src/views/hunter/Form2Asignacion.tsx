@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useFormStore } from '../../store/useFormStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LIMA_DISTRITOS } from '../../utils/constants';
 import { addToSyncQueue } from '../../utils/indexedDB';
+import { fetchApi } from '../../services/api.client';
 import styles from './FormWizard.module.css';
 
 export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: () => void }> = ({ opportunityId, onComplete }) => {
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
+  const isPublic = !user;
   
 
   const [formData, setFormData] = useState({
@@ -41,9 +42,10 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
       if (!opportunityId) return;
 
       try {
-        const { fetchApi } = await import('../../services/api.client');
-        const res = await fetchApi<any[]>('/opportunities');
-        const opp = res.find((o: any) => o.id === opportunityId);
+        const endpoint = isPublic ? `/public/opportunities/${opportunityId}` : '/opportunities';
+        const res = await fetchApi<any>(endpoint);
+        const opp = isPublic ? res : (Array.isArray(res) ? res.find((o: any) => o.id === opportunityId) : (res as any).data?.find((o: any) => o.id === opportunityId));
+        
         if (opp && opp.property) {
           const prop = opp.property;
           const getCoordinates = () => {
@@ -87,38 +89,35 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
     saveDraft(`form2-${opportunityId}`, newFormData);
   };
 
-  const captureLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const coords = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-        handleChange({ target: { name: 'coordenadas', value: coords } } as any);
-      }, (err) => {
-        toast.error('Error capturando ubicación: ' + err.message);
-      });
-    } else {
-      toast.error('Geolocalización no soportada por el navegador.');
-    }
-  };
-
   const nextStep = () => setStep(s => s + 1);
   const prevStep = () => setStep(s => s - 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { opportunitiesService } = await import('../../services/opportunities.service');
-      
-      // 1. Guardar datos del formulario en el backend (actualiza el predio)
-      if (opportunityId) {
-        await opportunitiesService.updateForms(opportunityId, {
-          ...formData,
-          _formType: 'FORM_ASIGNACION',
-        } as any);
-      }
+      if (isPublic) {
+        await fetchApi(`/public/opportunities/${opportunityId}/form`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            ...formData,
+            _formType: 'FORM_ASIGNACION'
+          })
+        });
+      } else {
+        const { opportunitiesService } = await import('../../services/opportunities.service');
+        
+        // 1. Guardar datos del formulario en el backend (actualiza el predio)
+        if (opportunityId) {
+          await opportunitiesService.updateForms(opportunityId, {
+            ...formData,
+            _formType: 'FORM_ASIGNACION',
+          } as any);
+        }
 
-      // 2. Transición de etapa: 4 → 5 (Form Asignación Completado)
-      // La función le suma +1, así que pasamos 4 para que llegue a posición 5
-      await opportunitiesService.transitionStage(opportunityId || '', 4, 'Formulario de asignación completado');
+        // 2. Transición de etapa: 4 → 5 (Form Asignación Completado)
+        // La función le suma +1, así que pasamos 4 para que llegue a posición 5
+        await opportunitiesService.transitionStage(opportunityId || '', 'S5', 'Formulario de asignación completado');
+      }
 
       toast.success('Formulario de asignación completado.');
       clearDraft(`form2-${opportunityId}`);
@@ -164,17 +163,16 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
               </select>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Tipo de Edificio *</label>
+              <label className={styles.label}>Tipo de Predio *</label>
               <select name="tipoEdificio" value={formData.tipoEdificio} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccionar el Tipo de Edificio</option>
-                <option value="Estreno">Estreno</option>
-                <option value="Moderno">Moderno</option>
-                <option value="Antiguo">Antiguo</option>
+                <option value="">Seleccionar el Tipo de Predio</option>
+                <option value="Edificio">Edificio</option>
+                <option value="Condominio">Condominio</option>
               </select>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del Proyecto/ Edificio/ Condominio *</label>
-              <input name="nombreProyecto" value={formData.nombreProyecto} onChange={handleChange} className={styles.input} required placeholder="Escribir el Nombre del Proyecto" />
+              <input name="nombreProyecto" value={formData.nombreProyecto} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir el Nombre del Proyecto" />
             </div>
           </div>
         )}
@@ -184,36 +182,24 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
             <h3 className={styles.stepTitle}>Ubicación</h3>
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Vía *</label>
-              <select name="tipoVia" value={formData.tipoVia} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccionar Tipo de Via</option>
-                <option value="Avenida">Avenida</option>
-                <option value="Calle">Calle</option>
-                <option value="Jirón">Jirón</option>
-                <option value="Pasaje">Pasaje</option>
-              </select>
+              <input name="tipoVia" value={formData.tipoVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre de Vía *</label>
-              <input name="nombreVia" value={formData.nombreVia} onChange={handleChange} className={styles.input} required placeholder="Escribir el nombre de la Via" />
+              <input name="nombreVia" value={formData.nombreVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir el nombre de la Via" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Numeraciones de Vía *</label>
-              <input name="numeracionesVia" value={formData.numeracionesVia} onChange={handleChange} className={styles.input} required placeholder="Escribir la Numeración de la Via (Ej. 428 )" />
+              <input name="numeracionesVia" value={formData.numeracionesVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir la Numeración de la Via (Ej. 428 )" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Distrito *</label>
-              <select name="distrito" value={formData.distrito} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccionar Distrito</option>
-                {LIMA_DISTRITOS.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+              <input name="distrito" value={formData.distrito} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Coordenadas *</label>
               <div style={{display:'flex', gap:'10px'}}>
-                <input name="coordenadas" value={formData.coordenadas} onChange={handleChange} className={styles.input} required placeholder="Escribir las coordenadas, solo números (Ej. -12.0397, -77.0372)" />
-                <button type="button" onClick={captureLocation} className={`${styles.button} ${styles.btnBack}`} style={{margin:0, width:'auto', padding:'0 15px'}}>📍 GPS</button>
+                <input name="coordenadas" value={formData.coordenadas} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed w-full`} required placeholder="Escribir las coordenadas, solo números (Ej. -12.0397, -77.0372)" />
               </div>
             </div>
           </div>

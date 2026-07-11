@@ -4,12 +4,15 @@ import { useFormStore } from '../../store/useFormStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LIMA_DISTRITOS } from '../../utils/constants';
 import { addToSyncQueue } from '../../utils/indexedDB';
+import { fetchApi } from '../../services/api.client';
 import styles from './FormWizard.module.css';
 
 export const Form1Registro: React.FC = () => {
   const [step, setStep] = useState(1);
   const { saveDraft, getDraft, clearDraft } = useFormStore();
   const { user } = useAuthStore();
+  const [hunters, setHunters] = useState<any[]>([]);
+  const isPublic = !user;
 
   
   const [formData, setFormData] = useState({
@@ -26,7 +29,11 @@ export const Form1Registro: React.FC = () => {
   useEffect(() => {
     const draft = getDraft('form1');
     if (draft) setFormData(draft);
-  }, [getDraft]);
+
+    if (isPublic) {
+      fetchApi('/public/hunters').then((data: any) => setHunters(data)).catch(console.error);
+    }
+  }, [getDraft, isPublic]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
@@ -53,8 +60,15 @@ export const Form1Registro: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { prediosService } = await import('../../services/predios.service');
-      await prediosService.createPredio(formData as any);
+      if (isPublic) {
+        await fetchApi('/public/registro-predio', {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        });
+      } else {
+        const { prediosService } = await import('../../services/predios.service');
+        await prediosService.createPredio(formData as any);
+      }
       toast.success('Predio registrado correctamente');
       clearDraft('form1');
       setStep(1);
@@ -87,10 +101,25 @@ export const Form1Registro: React.FC = () => {
             <h3 className={styles.stepTitle}>Datos Básicos</h3>
             <div className={styles.formGroup}>
               <label className={styles.label}>Ejecutivo</label>
-              <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
-                <span>👤</span>
-                <span>{user?.fullName || user?.email || 'Hunter'}</span>
-              </div>
+              {isPublic ? (
+                <select 
+                  name="ejecutivo" 
+                  value={formData.ejecutivo} 
+                  onChange={handleChange} 
+                  className={styles.select} 
+                  required
+                >
+                  <option value="">Seleccione su nombre</option>
+                  {hunters.map(h => (
+                    <option key={h.id} value={h.id}>{h.fullName}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
+                  <span>👤</span>
+                  <span>{user?.fullName || user?.email || 'Hunter'}</span>
+                </div>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del edificio *</label>

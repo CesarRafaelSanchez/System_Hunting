@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 
-export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCardClick: (card: any) => void }> = ({ cards, STAGES, onCardClick }) => {
+import { Edit2 } from 'lucide-react';
+
+export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCardClick: (card: any) => void; companiesList?: any[]; onCompanyChange?: (cardId: string, companyId: string) => void; userRole?: string }> = ({ cards, STAGES, onCardClick, companiesList, onCompanyChange, userRole }) => {
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(20);
 
@@ -42,6 +45,9 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
               <th className="p-3 w-12 text-center sticky left-0 bg-gray-50 z-30 shadow-[1px_0_0_0_#e5e7eb]"><input type="checkbox" className="rounded border-gray-300" /></th>
               <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50 z-30 shadow-[1px_0_0_0_#e5e7eb]">Proyecto / Edificio</th>
               
+              {/* Empresa (Nueva Columna) */}
+              <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-slate-100">Empresa</th>
+
               {/* Bloque Operativo */}
               <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-blue-50/50">Cód OPP</th>
               <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-blue-50/50">Canal</th>
@@ -110,6 +116,38 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                     {p.nombreProyecto || c.title}
                   </td>
                   
+                  {/* Empresa */}
+                  <td className="p-3 min-w-[150px]">
+                    {editingCompanyId === c.id ? (
+                      <select 
+                        className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-1 outline-none text-slate-700 w-full"
+                        value={c.companyId}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          setEditingCompanyId(null);
+                          if (onCompanyChange) onCompanyChange(c.id, e.target.value);
+                        }}
+                        onBlur={() => setEditingCompanyId(null)}
+                      >
+                        {companiesList?.map((comp: any) => <option key={comp.id} value={comp.id}>{comp.name}</option>)}
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-600 truncate uppercase">
+                          {companiesList?.find((comp: any) => comp.id === c.companyId)?.name || 'Sin Empresa'}
+                        </span>
+                        {(userRole === 'ADMIN' || userRole === 'BACKOFFICE') && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setEditingCompanyId(c.id); }}
+                            className="text-slate-400 hover:text-blue-500 transition-colors"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+
                   {/* Bloque Operativo */}
                   <td className="p-3 text-gray-600 font-mono">{c.code || '-'}</td>
                   <td className="p-3">

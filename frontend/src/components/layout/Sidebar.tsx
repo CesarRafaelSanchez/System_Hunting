@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LayoutDashboard, Clock, ClipboardList, History, ChevronLeft, ChevronRight, Settings, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Clock, ClipboardList, History, ChevronLeft, ChevronRight, Settings, BarChart3, Building2 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const { user } = useAuthStore();
@@ -36,6 +36,7 @@ export const Sidebar: React.FC = () => {
           { name: 'Kanban', path: '/backoffice', icon: LayoutDashboard },
           { name: 'Validación Expedientes', path: '/backoffice/validacion', icon: ClipboardList },
           { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
+          { name: 'Empresas', path: '/admin/empresas', icon: Building2 },
           { name: 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
           { name: 'Historial', path: '/backoffice/historial', icon: History },
         ];

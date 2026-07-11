@@ -29,7 +29,7 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo');
     }
 
-    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role };
+    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role, fullName: user.fullName };
     
     // Aquí podríamos retornar también un Refresh Token
     return {
@@ -45,7 +45,7 @@ export class AuthService {
   }
 
   async refresh(user: any) {
-    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role };
+    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role, fullName: user.fullName };
     return {
       access_token: this.jwtService.sign(payload),
     };
@@ -65,7 +65,7 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo');
     }
 
-    const payload = { email: targetUser.email, sub: targetUser.id, companyId: targetUser.companyId, role: targetUser.role };
+    const payload = { email: targetUser.email, sub: targetUser.id, companyId: targetUser.companyId, role: targetUser.role, fullName: targetUser.fullName };
     
     return {
       access_token: this.jwtService.sign(payload),

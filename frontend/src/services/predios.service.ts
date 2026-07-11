@@ -18,5 +18,12 @@ export const prediosService = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+  
+  createPrediosBulk: async (payloads: any[]) => {
+    return fetchApi('/predios/bulk', {
+      method: 'POST',
+      body: JSON.stringify(payloads),
+    });
   }
 };

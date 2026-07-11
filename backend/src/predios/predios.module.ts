@@ -27,5 +27,6 @@ import { OpportunitiesModule } from '../opportunities/opportunities.module';
   ],
   controllers: [PrediosController],
   providers: [PrediosService],
+  exports: [PrediosService],
 })
 export class PrediosModule {}

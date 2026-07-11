@@ -22,6 +22,15 @@ export class OpportunitiesController {
     return this.opportunitiesService.createOpportunity(req.user, createOpportunityDto, manager);
   }
 
+  @Post('bulk')
+  async createOpportunitiesBulk(
+    @Request() req: any,
+    @Body() bulkDtos: CreateOpportunityDto[],
+    @TransactionManager() manager: EntityManager
+  ) {
+    return this.opportunitiesService.createOpportunitiesBulk(req.user, bulkDtos, manager);
+  }
+
   @Get()
   async findAll(@Request() req: any) {
     return this.opportunitiesService.findAll(req.user);

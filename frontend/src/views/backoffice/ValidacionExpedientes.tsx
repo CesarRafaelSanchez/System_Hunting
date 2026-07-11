@@ -169,16 +169,16 @@ export const ValidacionExpedientes: React.FC = () => {
           }}
           onApprove={async (towersData) => {
             const currentStage = selectedCard.stage;
-            let targetStage = currentStage;
-            if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetStage = 6;
-            else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetStage = 14;
+            let targetCode = '';
+            if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetCode = 'S7';
+            else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetCode = 'S15';
             
-            if (targetStage !== currentStage) {
+            if (targetCode !== '') {
               try {
                 const { opportunitiesService } = await import('../../services/opportunities.service');
                 await opportunitiesService.transitionStage(
                   String(selectedCard.id), 
-                  targetStage, 
+                  targetCode, 
                   'Aprobación y transición por Validación Back Office', 
                   true, 
                   towersData

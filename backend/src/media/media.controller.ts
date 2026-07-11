@@ -12,7 +12,7 @@ export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file'), TransactionAuditInterceptor)
   async uploadFile(
     @Request() req: any,
     @UploadedFile() file: any,

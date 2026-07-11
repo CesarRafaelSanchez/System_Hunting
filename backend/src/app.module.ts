@@ -14,6 +14,8 @@ import { ReportQueueModule } from './report-queue/report-queue.module';
 import { BotApiModule } from './bot-api/bot-api.module';
 import { UsersModule } from './users/users.module';
 import { CompaniesModule } from './companies/companies.module';
+import { PipelinesModule } from './pipelines/pipelines.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { CompaniesModule } from './companies/companies.module';
     BotApiModule,
     UsersModule,
     CompaniesModule,
+    PipelinesModule,
+    PublicModule,
   ],
   controllers: [AppController],
   providers: [AppService],

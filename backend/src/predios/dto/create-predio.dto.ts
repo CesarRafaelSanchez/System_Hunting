@@ -76,4 +76,12 @@ export class CreatePredioDto {
 
   @IsOptional()
   torresEstructura?: any[];
+
+  @IsString()
+  @IsOptional()
+  companyId?: string;
+
+  @IsString()
+  @IsOptional()
+  initialStageCode?: string;
 }

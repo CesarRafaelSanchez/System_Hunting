@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
 export class TransitionStageDto {
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  toStagePosition: number;
+  toStageIdOrCode: string;
 
   @IsBoolean()
   @IsOptional()

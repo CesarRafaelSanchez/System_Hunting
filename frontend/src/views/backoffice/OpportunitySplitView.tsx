@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Clock, FileText, Building, Edit2, User, ImageIcon } from 'lucide-react';
+import { X, CheckCircle, FileText, Building, Edit2, User, ImageIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from 'sonner';
 import { compressImage } from '../../utils/imageUtils';
@@ -61,6 +61,8 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
   const [activeTab, setActiveTab] = useState('basic_info'); // basic_info, form_2, form_3, photos
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<string | null>(null);
+  const [companiesList, setCompaniesList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
   
   const { user } = useAuthStore();
   const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'ADMIN';
@@ -99,20 +101,23 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
 
   // Data State - mapped from specifications
   const [formData, setFormData] = useState<any>({
+    companyId: card.companyId || card.property?.companyId || '',
+    reasignarUserId: card.currentOwnerUserId || '',
     // Form 1
     ejecutivoF1: card.property?.ejecutivo || card.currentOwnerUser?.fullName || 'Sin Asignar',
-    resultadoVisitaF1: '-',
-    detalleVisitaF1: '-',
+    resultadoVisitaF1: card.property?.resultadoVisita || '-',
+    detalleVisitaF1: card.property?.detalleVisita || '-',
+    direccionExactaF1: card.property?.direccionExacta || '-',
     
     // Form 2
     hunterF2: card.property?.ejecutivo || card.currentOwnerUser?.fullName || 'Sin Asignar',
     ingresoF2: hasForm2 ? (card.property?.origenProspeccion || '-') : '-',
     tipoEdificioF2: hasForm2 ? (card.property?.clasificacionProyecto || '-') : '-',
     nombreProyectoF2: card.property?.nombreProyecto || card.title || '-',
-    tipoViaF2: hasForm2 ? (card.property?.tipoVia || '-') : '-',
+    tipoViaF2: card.property?.tipoVia || '-',
     nombreViaF2: card.property?.nombreVia || '-',
     numeracionViaF2: card.property?.numeracionMunicipal || '-',
-    distritoF2: card.property?.distrito || '-',
+    distritoF2: card.property?.distrito?.nombre || card.property?.distrito || '-',
     coordenadasF2: getCoordinates(),
     numeroHpsF2: card.property?.totalHogares?.toString() || '-',
     estrenoF2: hasForm2 
@@ -147,11 +152,11 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     distritoF3: hasForm3 ? (card.property?.distrito || '-') : '-',
     urbanizacionF3: hasForm3 ? (card.property?.urbanizacionZona || '-') : '-',
     codigoPostalF3: hasForm3 ? (card.property?.codigoPostal || '-') : '-',
-    tipoViaF3: hasForm3 ? (card.property?.tipoVia || '-') : '-',
-    nombreViaF3: hasForm3 ? (card.property?.nombreVia || '-') : '-',
-    numeracionViaF3: hasForm3 ? (card.property?.numeracionMunicipal || '-') : '-',
+    tipoViaF3: card.property?.tipoVia || '-',
+    nombreViaF3: card.property?.nombreVia || '-',
+    numeracionViaF3: card.property?.numeracionMunicipal || '-',
     coordenadasF3: getCoordinates(),
-    totalTorresF3: hasForm3 ? (card.property?.totalTorres?.toString() || '-') : '-',
+    totalTorresF3: card.property?.totalTorres?.toString() || '-',
     totalHogaresF3: hasForm3 ? (card.property?.totalHogares?.toString() || '-') : '-',
     clientesInteresadosF3: hasForm3 ? (card.property?.clientesInteresados?.toString() || '-') : '-'
   });
@@ -174,11 +179,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
 
           submissions.forEach((sub: any) => {
             const payload = sub.raw_payload_json;
-            if (sub.form_code === 'FORM_REGISTRO_PREDIO') {
-              newFormData.resultadoVisitaF1 = payload.resultadoVisita || '-';
-              newFormData.detalleVisitaF1 = payload.detalle || '-';
-            }
-            else if (sub.form_code === 'FORM_ASIGNACION') {
+            if (sub.form_code === 'FORM_ASIGNACION') {
               newFormData.inmobiliariaF2 = payload.inmobiliaria || '-';
             }
             else if (sub.form_code === 'FORM_FICHA_DATOS') {
@@ -213,6 +214,24 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     };
     fetchMedia();
   }, [card.id]);
+
+  useEffect(() => {
+    if (isBackOfficeOrAdmin) {
+      const fetchCompanies = async () => {
+        try {
+          const { fetchApi } = await import('../../services/api.client');
+          const data = await fetchApi<any[]>('/companies');
+          setCompaniesList(data);
+          
+          const users = await fetchApi<any[]>('/users');
+          setUsersList(users.filter(u => u.role === 'HUNTER'));
+        } catch (e) {
+          console.error('Error fetching companies or users', e);
+        }
+      };
+      fetchCompanies();
+    }
+  }, [isBackOfficeOrAdmin]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: string) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -264,16 +283,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     setTowers(towers.filter((_, i) => i !== index));
   };
 
-  const isForm2Stage = card.stage === 5;
   const isForm3Stage = card.stage === 13;
-
-  const stagesList = [
-    { label: 'Registro de Predio', index: 0 },
-    { label: 'Formulario Asignación', index: 4 },
-    { label: 'Validación Back Office', index: 5 },
-    { label: 'Ficha de Datos', index: 12 },
-    { label: 'Validación Back Office 2', index: 13 }
-  ];
 
   globalIsEditing = isEditing;
   globalHandleChange = handleChange;
@@ -293,19 +303,22 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
       <div className="flex-1 flex overflow-hidden">
         
         {/* Panel 1: Contenido con Tabs */}
-        <div className="w-3/5 flex flex-col border-r border-gray-200 bg-gray-50">
+        <div className="flex-1 flex flex-col border-r border-gray-200 bg-gray-50 overflow-hidden">
           {/* Tabs Navigation */}
-          <div className="flex border-b border-gray-200 bg-white">
-            <button className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic_info' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('basic_info')}>
+          <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
+            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'basic_info' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('basic_info')}>
               INFORMACIÓN BÁSICA
             </button>
-            <button className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'form_2' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_2')}>
+            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_1' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_1')}>
+              REGISTRO DE PREDIO
+            </button>
+            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_2' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_2')}>
               FORM. ASIGNACIÓN
             </button>
-            <button className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'form_3' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_3')}>
+            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_3' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_3')}>
               FICHA DE DATOS
             </button>
-            <button className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'photos' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('photos')}>
+            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'photos' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('photos')}>
               FOTOS
             </button>
           </div>
@@ -313,28 +326,68 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
             {activeTab === 'basic_info' && (
-              <>
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User className="w-5 h-5 text-ghl-lightBlue"/> Génesis / Registro de Predio</h4>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="Ejecutivo" name="ejecutivoF1" value={formData.ejecutivoF1} />
-                    <Field label="Resultado de Visita" name="resultadoVisitaF1" value={formData.resultadoVisitaF1} />
-                    <Field label="Detalle de la Visita" name="detalleVisitaF1" value={formData.detalleVisitaF1} type="textarea" colSpan={2} />
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Building className="w-5 h-5 text-ghl-lightBlue"/> Detalles de la Oportunidad</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre del Proyecto / Predio</label>
+                    <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{card.title || card.property?.nombreProyecto || '-'}</p>
                   </div>
-                </div>
+                  
+                  {isBackOfficeOrAdmin && (
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Empresa Asignada</label>
+                      {isEditing ? (
+                        <select 
+                          name="companyId" 
+                          className="w-full border border-ghl-lightBlue rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ghl-blue bg-white" 
+                          value={formData.companyId || ''} 
+                          onChange={handleChange}
+                        >
+                          <option value="">- Seleccionar Empresa -</option>
+                          {companiesList.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100 flex items-center gap-2">
+                          <Building className="w-4 h-4 text-gray-400" />
+                          {companiesList.find(c => c.id === formData.companyId)?.name || 'Sin Asignar'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="col-span-1">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Hunter Asignado</label>
+                    <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100 flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-400" />
+                      {card.currentOwnerUser?.fullName || card.property?.ejecutivo || 'Sin Asignar'}
+                    </p>
+                  </div>
 
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Building className="w-5 h-5 text-ghl-lightBlue"/> Datos Generales</h4>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="Nombre Proyecto" name="nombreProyectoF2" value={formData.nombreProyectoF2} />
-                    <Field label="Hunter Asignado" name="hunterF2" value={formData.hunterF2} />
-                    <Field label="Origen / Canal" name="origenF3" value={formData.origenF3} />
-                    <Field label="Distrito" name="distritoF2" value={formData.distritoF2} />
-                    <Field label="Dirección Exacta" name="nombreViaF2" value={formData.nombreViaF2} colSpan={2} />
-                    <Field label="Coordenadas" name="coordenadasF2" value={formData.coordenadasF2} colSpan={2} />
+                  <div className="col-span-1">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Distrito</label>
+                    <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{formData.distritoF2}</p>
                   </div>
                 </div>
-              </>
+              </div>
+            )}
+
+            {activeTab === 'form_1' && (
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User className="w-5 h-5 text-ghl-lightBlue"/> Génesis / Registro de Predio</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <Field label="Ejecutivo" name="ejecutivoF1" value={formData.ejecutivoF1} />
+                  <Field label="Resultado de Visita" name="resultadoVisitaF1" value={formData.resultadoVisitaF1} />
+                  <Field label="Detalle de la Visita" name="detalleVisitaF1" value={formData.detalleVisitaF1} type="textarea" colSpan={2} />
+                  <Field label="Origen / Canal" name="origenF3" value={formData.origenF3} />
+                  <Field label="Distrito" name="distritoF2" value={formData.distritoF2} />
+                  <Field label="Dirección Exacta" name="direccionExactaF1" value={formData.direccionExactaF1} colSpan={2} />
+                  <Field label="Coordenadas" name="coordenadasF2" value={formData.coordenadasF2} colSpan={2} />
+                  <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" />
+                </div>
+              </div>
             )}
 
             {activeTab === 'form_2' && (
@@ -538,172 +591,153 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
           </div>
         </div>
 
-        {/* Panel 2: Timeline */}
-        <div className="w-1/5 p-6 border-r border-gray-200 bg-white flex flex-col">
-          <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-ghl-lightBlue" />
-            Historial
-          </h3>
-          <div className="relative border-l-2 border-gray-200 ml-3 space-y-8 flex-1">
-            {stagesList.map((stageItem) => {
-              const isPast = card.stage > stageItem.index;
-              const isCurrent = card.stage === stageItem.index;
-              
-              let dotColor = "bg-gray-300";
-              let textColor = "text-gray-400";
-              let statusText = "Pendiente";
-              
-              if (isPast) {
-                dotColor = "bg-green-500";
-                textColor = "text-gray-800";
-                statusText = "Completado";
-              } else if (isCurrent) {
-                dotColor = "bg-ghl-lightBlue animate-pulse";
-                textColor = "text-ghl-blue";
-                statusText = "En progreso";
-              }
-
-              return (
-                <div key={stageItem.index} className="relative pl-6">
-                  <span className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${dotColor}`}></span>
-                  <p className={`text-sm font-bold ${textColor} leading-tight`}>{stageItem.label}</p>
-                  <p className={`text-xs font-semibold ${textColor === 'text-gray-800' ? 'text-gray-500' : textColor} mt-1`}>{statusText}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Panel 3: Acciones Condicionales */}
+        {/* Panel 2 (Ahora único panel lateral izquierdo de acciones) */}
         {isBackOfficeOrAdmin && (
-          <div className="w-1/5 p-6 bg-gray-50 flex flex-col">
+          <div className="w-[300px] xl:w-[350px] p-6 bg-gray-50 border-l border-gray-200 flex flex-col flex-shrink-0">
             <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-ghl-lightBlue" />
               Acciones
             </h3>
 
             <div className="flex-1 flex flex-col space-y-4 pt-4">
-              {(isForm2Stage || isForm3Stage) ? (
-                <>
-                  <p className="text-xs text-gray-600 mb-2 text-center font-medium">
-                    Requiere validación de Back Office para continuar.
-                  </p>
-                  <button 
-                    className={`flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 rounded-lg font-bold text-sm transition-colors ${isEditing ? 'border-green-600 text-green-600 bg-green-50' : 'border-ghl-blue text-ghl-blue hover:bg-blue-50'}`}
-                    onClick={async () => {
-                      if (isEditing) {
-                        try {
-                          const { opportunitiesService } = await import('../../services/opportunities.service');
-                          
-                          // Map fields back to the payload expected by updateForms
-                          const payload = {
-                            nombreProyecto: formData.nombreProyectoF2,
-                            tipoVia: formData.tipoViaF2,
-                            nombreVia: formData.nombreViaF2,
-                            numeracionesVia: formData.numeracionViaF2,
-                            distrito: formData.distritoF2,
-                            coordenadas: formData.coordenadasF2,
-                            numeroHPs: formData.numeroHpsF2,
-                            tipoEdificio: formData.tipoEdificioF2,
-                            estreno: formData.estrenoF2,
-                            fechaEntrega: formData.fechaEntregaF2,
-                            fechaMontantes: formData.fechaMontantesF2,
-                            inmobiliaria: formData.inmobiliariaF2,
-                            
-                            // Form 3 fields too
-                            nombreCanal: formData.nombreCanalF3,
-                            tipoProyecto: formData.tipoProyectoF3,
-                            fuente: formData.origenF3,
-                            clasificacion: formData.clasificacionF3,
-                            tipoConstruccion: formData.tipoConstruccionF3,
-                            juntaDirectiva: formData.juntaDirectivaF3,
-                            cargoResponsable: formData.cargoResponsableF3,
-                            nombreResponsable: formData.nombreResponsableF3,
-                            telefonoResponsable: formData.telefonoResponsableF3,
-                            correoResponsable: formData.correoResponsableF3,
-                            visitaInspeccion: formData.visitaInspeccionF3,
-                            horarioVisita: formData.horarioVisitaF3,
-                            departamento: formData.departamentoF3,
-                            provincia: formData.provinciaF3,
-                            urbanizacion: formData.urbanizacionF3,
-                            codigoPostal: formData.codigoPostalF3,
-                            totalTorres: formData.totalTorresF3,
-                            totalHogares: formData.totalHogaresF3,
-                            clientesInteresados: formData.clientesInteresadosF3,
-                            towersData: towers
-                          };
+              <button 
+                className={`flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 rounded-lg font-bold text-sm transition-colors ${isEditing ? 'border-green-600 text-green-600 bg-green-50' : 'border-ghl-blue text-ghl-blue hover:bg-blue-50'}`}
+                onClick={async () => {
+                  if (isEditing) {
+                    try {
+                      const { opportunitiesService } = await import('../../services/opportunities.service');
+                      
+                      const payload = {
+                        nombreProyecto: formData.nombreProyectoF2,
+                        tipoVia: formData.tipoViaF2,
+                        nombreVia: formData.nombreViaF2,
+                        numeracionMunicipal: formData.numeracionViaF2,
+                        numeroHogares: formData.numeroHpsF2 ? parseInt(formData.numeroHpsF2) : undefined,
+                        estadoConstruccion: formData.estrenoF2,
+                        terminoMontantes: formData.fechaMontantesF2,
+                        fechaEntrega: formData.fechaEntregaF2,
+                        inmobiliaria: formData.inmobiliariaF2,
+                        companyId: formData.companyId,
+                      };
 
-                          await opportunitiesService.updateForms(card.id, payload as any);
-                          toast.success('Datos actualizados correctamente en el servidor.');
-                          if (onSave) onSave();
-                        } catch (e: any) {
-                          toast.error('Error al guardar datos: ' + (e.message || 'Error de red'));
-                          return; // Don't exit edit mode if save failed
-                        }
-                      }
-                      setIsEditing(!isEditing);
-                    }}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    {isEditing ? 'Guardar' : 'Editar Datos'}
-                  </button>
+                      await opportunitiesService.updateForms(card.id, payload);
+                      toast.success('Datos actualizados correctamente');
+                      setIsEditing(false);
+                      if (onSave) onSave();
+                    } catch (e) {
+                      toast.error('Error al actualizar datos');
+                      console.error(e);
+                    }
+                  } else {
+                    setIsEditing(true);
+                  }
+                }}
+              >
+                {isEditing ? <CheckCircle className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                {isEditing ? 'Guardar Cambios' : 'Editar Datos'}
+              </button>
 
-                  <button 
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors shadow-sm"
-                    onClick={() => {
-                      // Validation before approving
-                      for (const tower of towers) {
-                        const numPisos = parseInt(tower.pisos_torre, 10) || 0;
-                        if (tower.hogares_por_piso && tower.hogares_por_piso.includes(',')) {
-                          if (tower.hogares_por_piso.split(',').length !== numPisos) {
-                            toast.error(`Error en ${tower.nombre_torre || 'Torre'}: La cantidad de hogares separados por comas no coincide con el número de pisos (${numPisos}).`);
+              {isForm3Stage && (
+                <button 
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                  onClick={() => {
+                    if (isForm3Stage) {
+                      for (let t of towers) {
+                        const numPisos = parseInt(t.pisos_torre, 10) || 0;
+                        let hogaresStr = t.hogares_por_piso;
+                        if (hogaresStr && !hogaresStr.includes(',') && /^\d+$/.test(hogaresStr)) {
+                          const parts = hogaresStr.split(',');
+                          if (parts.length > 1 && parts.length !== numPisos) {
+                            toast.error(`Torre ${t.nombre_torre}: Los hogares por piso deben coincidir con el número de pisos.`);
+                            return;
+                          }
+                        } else if (hogaresStr && hogaresStr.includes(',')) {
+                          const parts = hogaresStr.split(',');
+                          if (parts.length !== numPisos) {
+                            toast.error(`Torre ${t.nombre_torre}: Los hogares por piso deben coincidir con el número de pisos.`);
                             return;
                           }
                         }
                       }
+                    }
 
-                      // Parser Case A (Expansion)
-                      const expandedTowers = towers.map(tower => {
-                        const numPisos = parseInt(tower.pisos_torre, 10) || 0;
-                        let hogaresStr = tower.hogares_por_piso;
-                        if (hogaresStr && !hogaresStr.includes(',') && /^\d+$/.test(hogaresStr)) {
-                          hogaresStr = Array(numPisos).fill(hogaresStr).join(',');
-                        }
-                        return { ...tower, hogares_por_piso: hogaresStr };
-                      });
+                    const expandedTowers = towers.map(tower => {
+                      const numPisos = parseInt(tower.pisos_torre, 10) || 0;
+                      let hogaresStr = tower.hogares_por_piso;
+                      if (hogaresStr && !hogaresStr.includes(',') && /^\d+$/.test(hogaresStr)) {
+                        hogaresStr = Array(numPisos).fill(hogaresStr).join(',');
+                      }
+                      return { ...tower, hogares_por_piso: hogaresStr };
+                    });
 
-                      onApprove(expandedTowers);
+                    onApprove(expandedTowers);
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Aprobar
+                </button>
+              )}
+
+              {card.stage === 0 && (
+                <div className="flex flex-col space-y-3 pt-2">
+                  <button 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                    onClick={async () => {
+                      try {
+                        const { opportunitiesService } = await import('../../services/opportunities.service');
+                        await opportunitiesService.transitionStage(card.id, 'S2');
+                        toast.success('Prospecto marcado como Aceptado');
+                        if (onSave) onSave();
+                      } catch (e) {
+                        toast.error('Error al actualizar etapa');
+                      }
                     }}
                   >
-                    <CheckCircle className="w-4 h-4" />
-                    Aprobar
+                    Prospecto Aceptado / Trabajable
                   </button>
-                </>
-              ) : (
-                <div className="text-center p-4 border border-dashed border-gray-300 rounded-lg bg-white mb-4">
-                  <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs text-gray-500 font-semibold">Oportunidad en flujo normal.</p>
+                  <button 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                    onClick={async () => {
+                      try {
+                        const { opportunitiesService } = await import('../../services/opportunities.service');
+                        await opportunitiesService.transitionStage(card.id, 'S3');
+                        toast.success('Prospecto marcado como Rechazado');
+                        if (onSave) onSave();
+                      } catch (e) {
+                        toast.error('Error al actualizar etapa');
+                      }
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                    Prospecto Rechazado / No Trabajable
+                  </button>
                 </div>
               )}
               
               {user?.role === 'ADMIN' && (
                 <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
                   <p className="text-xs font-bold text-gray-700 uppercase mb-2">Reasignar Propietario</p>
-                  <input 
-                    type="text" 
-                    name="hunterF2"
-                    value={formData.hunterF2}
+                  <select 
+                    name="reasignarUserId"
+                    value={formData.reasignarUserId}
                     onChange={handleChange}
-                    placeholder="ID / Nombre del Hunter"
-                    className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 mb-2 outline-none focus:border-ghl-blue"
-                  />
+                    className="w-full text-sm border border-gray-300 rounded px-2 py-2 mb-3 outline-none focus:border-ghl-blue bg-white"
+                  >
+                    <option value="">- Seleccionar Hunter -</option>
+                    {usersList.map(u => (
+                      <option key={u.id} value={u.id}>{u.fullName}</option>
+                    ))}
+                  </select>
                   <button 
-                    className="w-full py-2 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-900 transition-colors"
+                    className="w-full py-2 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-900 transition-colors disabled:opacity-50"
+                    disabled={!formData.reasignarUserId || formData.reasignarUserId === card.currentOwnerUserId}
                     onClick={async () => {
                       try {
                         const { opportunitiesService } = await import('../../services/opportunities.service');
-                        await opportunitiesService.updateForms(card.id, { currentOwnerUserId: formData.hunterF2 });
-                        toast.success(`Propietario reasignado a: ${formData.hunterF2}`);
+                        await opportunitiesService.updateForms(card.id, { currentOwnerUserId: formData.reasignarUserId });
+                        const userSelected = usersList.find(u => u.id === formData.reasignarUserId);
+                        toast.success(`Propietario reasignado a: ${userSelected?.fullName || 'Desconocido'}`);
+                        if (onSave) onSave();
                       } catch (e) {
                         toast.error('Error al reasignar propietario');
                         console.error(e);

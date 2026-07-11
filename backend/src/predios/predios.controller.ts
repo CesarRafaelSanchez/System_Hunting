@@ -24,6 +24,20 @@ export class PrediosController {
     }
   }
 
+  @Post('bulk')
+  async createPrediosBulk(@Request() req: any, @Body() bulkDtos: CreatePredioDto[], @TransactionManager() manager: EntityManager) {
+    const results = [];
+    for (const dto of bulkDtos) {
+      try {
+        const result = await this.prediosService.createPredio(req.user, dto, manager);
+        results.push(result);
+      } catch (error) {
+        console.error(`[PrediosController] Error en bulk al crear predio ${dto.nombreEdificio}:`, error.message);
+      }
+    }
+    return results;
+  }
+
   @Put(':id')
   async updatePredio(
     @Param('id') id: string,

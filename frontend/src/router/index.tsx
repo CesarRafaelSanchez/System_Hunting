@@ -9,8 +9,36 @@ import { TimeMark } from '../views/hunter/TimeMark';
 import { RegistrarPredio } from '../views/hunter/RegistrarPredio';
 import { AsignacionPredio } from '../views/hunter/AsignacionPredio';
 import { FichaDatosPredio } from '../views/hunter/FichaDatosPredio';
+import { Form2Asignacion } from '../views/hunter/Form2Asignacion';
+import { Form3FichaDatos } from '../views/hunter/Form3FichaDatos';
+
+import { useParams } from 'react-router-dom';
+
+const PublicForm2Route = () => {
+  const { opportunityId } = useParams<{ opportunityId: string }>();
+  return (
+    <div className="p-4 flex justify-center w-full min-h-screen bg-gray-50">
+      <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-sm">
+        <Form2Asignacion opportunityId={opportunityId} />
+      </div>
+    </div>
+  );
+};
+
+const PublicForm3Route = () => {
+  const { opportunityId } = useParams<{ opportunityId: string }>();
+  return (
+    <div className="p-4 flex justify-center w-full min-h-screen bg-gray-50">
+      <div className="w-full max-w-3xl bg-white p-6 rounded-2xl shadow-sm">
+        <Form3FichaDatos opportunityId={opportunityId} />
+      </div>
+    </div>
+  );
+};
+
 import { KanbanBoard } from '../views/backoffice/KanbanBoard';
 import { UserManagement } from '../views/admin/UserManagement';
+import { CompaniesManagement } from '../views/admin/CompaniesManagement';
 import { DashboardView } from '../views/dashboard/DashboardView';
 import { ValidacionExpedientes } from '../views/backoffice/ValidacionExpedientes';
 import { SyncManager } from '../components/SyncManager';
@@ -100,13 +128,22 @@ export const AppRouter = () => {
             <Navigate to="/login" replace />
           </PublicRoute>
         } />
-
         {/* RUTAS PÚBLICAS */}
         <Route path="/login" element={
           <PublicRoute>
             <LoginView />
           </PublicRoute>
         } />
+
+        <Route path="/public/registro-predio" element={
+          <div className="p-4 flex justify-center w-full min-h-screen bg-gray-50">
+            <RegistrarPredio />
+          </div>
+        } />
+        
+        <Route path="/public/asignacion/:opportunityId" element={<PublicForm2Route />} />
+        
+        <Route path="/public/ficha-datos/:opportunityId" element={<PublicForm3Route />} />
 
         {/* ONBOARDING */}
         <Route path="/setup-company" element={
@@ -200,6 +237,12 @@ export const AppRouter = () => {
           <Route path="/admin/usuarios" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <UserManagement />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/empresas" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <CompaniesManagement />
             </ProtectedRoute>
           } />
         </Route>

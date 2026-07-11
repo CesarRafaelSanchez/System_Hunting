@@ -20,6 +20,15 @@ export class Predio {
   @Column({ type: 'text', name: 'nombre_proyecto' })
   nombreProyecto: string;
 
+  @Column({ length: 150, name: 'resultado_visita', nullable: true })
+  resultadoVisita: string;
+
+  @Column({ type: 'text', name: 'detalle_visita', nullable: true })
+  detalleVisita: string;
+
+  @Column({ type: 'text', name: 'direccion_exacta', nullable: true })
+  direccionExacta: string;
+
   @Column({ length: 80, name: 'tipo_desarrollo' })
   tipoDesarrollo: string;
 
@@ -102,6 +111,24 @@ export class Predio {
 
   @OneToMany(() => PropertyContact, propertyContact => propertyContact.predio)
   propertyContacts: PropertyContact[];
+
+  @Column({ length: 150, nullable: true })
+  inmobiliaria: string;
+
+  @Column({ length: 150, nullable: true, name: 'nombre_responsable' })
+  nombreResponsable: string;
+
+  @Column({ length: 30, nullable: true, name: 'telefono_responsable' })
+  telefonoResponsable: string;
+
+  @Column({ length: 100, nullable: true, name: 'cargo_responsable' })
+  cargoResponsable: string;
+
+  @Column({ length: 150, nullable: true, name: 'correo_responsable' })
+  correoResponsable: string;
+
+  @Column({ length: 80, nullable: true, name: 'origen_ingreso' })
+  ingreso: string;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
