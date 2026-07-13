@@ -35,6 +35,10 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
     const fetchOpportunityData = async () => {
       const draft = getDraft(`form2-${opportunityId}`);
       if (draft) {
+        // Sanitize draft to remove default '-' strings
+        if (draft.tipoVia === '-') draft.tipoVia = '';
+        if (draft.nombreVia === '-') draft.nombreVia = '';
+        if (draft.numeracionesVia === '-') draft.numeracionesVia = '';
         setFormData(draft);
         return;
       }
@@ -61,13 +65,15 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
           setFormData(prev => ({
             ...prev,
             nombreProyecto: prop.nombreProyecto || '',
-            tipoVia: prop.tipoVia || '',
-            nombreVia: prop.nombreVia || '',
-            numeracionesVia: prop.numeracionMunicipal || '',
+            tipoVia: (prop.tipoVia === '-' ? '' : prop.tipoVia) || '',
+            nombreVia: (prop.nombreVia === '-' ? '' : prop.nombreVia) || '',
+            numeracionesVia: (prop.numeracionMunicipal === '-' ? '' : prop.numeracionMunicipal) || '',
             distrito: prop.distrito || '',
             coordenadas: getCoordinates(),
             numeroHPs: prop.totalHogares?.toString() || '',
             tipoEdificio: prop.clasificacionProyecto || '',
+            ingreso: opp.isReferral ? 'Referido' : 'Propio',
+            nombreHunter: opp.currentOwnerUser?.fullName || user?.fullName || 'Hunter',
           }));
         }
       } catch (e) {
@@ -151,16 +157,12 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
               <label className={styles.label}>Nombre del Hunter</label>
               <div className={`${styles.input} bg-gray-50 text-gray-600 flex items-center gap-2`} style={{cursor: 'default'}}>
                 <span>👤</span>
-                <span>{user?.fullName || user?.email || 'Hunter'}</span>
+                <span>{formData.nombreHunter}</span>
               </div>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Ingreso *</label>
-              <select name="ingreso" value={formData.ingreso} onChange={handleChange} className={styles.select} required>
-                <option value="">Seleccionar Tipo de Ingreso</option>
-                <option value="Propio">Propio</option>
-                <option value="Referido">Referido</option>
-              </select>
+              <input name="ingreso" value={formData.ingreso} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Predio *</label>
@@ -182,15 +184,27 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
             <h3 className={styles.stepTitle}>Ubicación</h3>
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Vía *</label>
-              <input name="tipoVia" value={formData.tipoVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
+              <select name="tipoVia" value={formData.tipoVia || ''} onChange={handleChange} className={styles.select} required>
+                <option value="">Seleccione el tipo de vía</option>
+                <option value="Avenida">Avenida (Av.)</option>
+                <option value="Jirón">Jirón (Jr.)</option>
+                <option value="Calle">Calle (Ca.)</option>
+                <option value="Pasaje">Pasaje (Pj.)</option>
+                <option value="Alameda">Alameda (Al.)</option>
+                <option value="Malecón">Malecón (Mal.)</option>
+                <option value="Prolongación">Prolongación (Prol.)</option>
+                <option value="Carretera">Carretera (Carr.)</option>
+                <option value="Autopista">Autopista (Aut.)</option>
+                <option value="Otro">Otro</option>
+              </select>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre de Vía *</label>
-              <input name="nombreVia" value={formData.nombreVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir el nombre de la Via" />
+              <input name="nombreVia" value={formData.nombreVia || ''} onChange={handleChange} className={styles.input} required placeholder="Escribir el nombre de la Via" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Numeraciones de Vía *</label>
-              <input name="numeracionesVia" value={formData.numeracionesVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir la Numeración de la Via (Ej. 428 )" />
+              <input name="numeracionesVia" value={formData.numeracionesVia || ''} onChange={handleChange} className={styles.input} required placeholder="Escribir la Numeración de la Via (Ej. 428 )" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Distrito *</label>
@@ -199,7 +213,7 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
             <div className={styles.formGroup}>
               <label className={styles.label}>Coordenadas *</label>
               <div style={{display:'flex', gap:'10px'}}>
-                <input name="coordenadas" value={formData.coordenadas} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed w-full`} required placeholder="Escribir las coordenadas, solo números (Ej. -12.0397, -77.0372)" />
+                <input name="coordenadas" value={formData.coordenadas} onChange={handleChange} className={styles.input} required placeholder="Escribir las coordenadas (Ej. -12.0397, -77.0372)" />
               </div>
             </div>
           </div>
@@ -210,7 +224,7 @@ export const Form2Asignacion: React.FC<{ opportunityId?: string, onComplete?: ()
             <h3 className={styles.stepTitle}>Detalles y Solicitud</h3>
             <div className={styles.formGroup}>
               <label className={styles.label}>Número de Departamentos u Hogares (HPs) *</label>
-              <input type="number" name="numeroHPs" value={formData.numeroHPs} onChange={handleChange} className={styles.input} required placeholder="Escribir solo números (Ej. 123)" />
+              <input type="number" name="numeroHPs" value={formData.numeroHPs} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label} style={{marginBottom: '5px'}}>¿Es Edificio de Estreno? *</label>

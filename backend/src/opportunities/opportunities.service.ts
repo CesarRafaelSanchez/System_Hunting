@@ -145,6 +145,7 @@ export class OpportunitiesService {
       where: whereClause,
       relations: {
         currentStage: true,
+        company: true,
         property: {
           distrito: true,
           hunterPrincipal: true,
@@ -244,13 +245,23 @@ export class OpportunitiesService {
       // Hogares y torres
       if (dto.numeroHPs && dto.numeroHPs !== '-')     predio.totalHogares = parseInt(dto.numeroHPs, 10) || predio.totalHogares;
       if (dto.totalHogares && dto.totalHogares !== '-')  predio.totalHogares = parseInt(dto.totalHogares, 10) || predio.totalHogares;
-      if (dto.totalTorres && dto.totalTorres !== '-')   predio.totalTorres  = parseInt(dto.totalTorres, 10) || predio.totalTorres;
+      if (dto.totalTorres && dto.totalTorres !== '-') {
+        predio.totalTorres  = parseInt(dto.totalTorres, 10) || predio.totalTorres;
+        predio.clasificacionProyecto = predio.totalTorres <= 2 ? 'EDIFICIO' : 'CONDOMINIO';
+      }
 
       // Tipo de edificio y estado
-      if (dto.tipoEdificio && dto.tipoEdificio !== '-')  predio.clasificacionProyecto = dto.tipoEdificio;
+      if (dto.tipoEdificio && dto.tipoEdificio !== '-')  predio.clasificacionProyecto = dto.tipoEdificio; // Fallback
       if (dto.tipoProyecto && dto.tipoProyecto !== '-')  predio.tipoDesarrollo        = dto.tipoProyecto;
-      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno;
-      if (estrenoVal && estrenoVal !== '-')            predio.estadoConstruccion    = estrenoVal;
+      
+      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno || dto.estadoConstruccion;
+      if (predio.estadoConstruccion !== 'SI') { // 'SI' stands for ESTRENO in Form 2
+         if (estrenoVal && estrenoVal !== '-') {
+           predio.estadoConstruccion = estrenoVal;
+         }
+      } else if (predio.estadoConstruccion === 'SI') {
+         predio.estadoConstruccion = 'ESTRENO'; // Normalizing to ESTRENO
+      }
       if (dto.juntaDirectiva && dto.juntaDirectiva !== '-') predio.juntaDirectiva       = dto.juntaDirectiva;
       if (dto.visitaInspeccion && dto.visitaInspeccion !== '-') {
         const parsed = parseBackendDate(dto.visitaInspeccion);

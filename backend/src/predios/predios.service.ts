@@ -13,6 +13,7 @@ import { Distrito } from '../database/entities/distrito.entity';
 import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { Pipeline } from '../database/entities/pipeline.entity';
 import { LeadSource } from '../database/entities/lead-source.entity';
+import { User } from '../database/entities/user.entity';
 
 @Injectable()
 export class PrediosService {
@@ -136,18 +137,31 @@ export class PrediosService {
       await manager.save(leadSource);
     }
 
+    let assignedOwnerId = user.id;
+    if (dto.isReferral) {
+      const boUser = await manager.findOne(User, { where: { role: 'BACKOFFICE', companyId: assignedCompanyId } });
+      if (boUser) {
+        assignedOwnerId = boUser.id;
+      } else {
+        const adminUser = await manager.findOne(User, { where: { role: 'ADMIN' } });
+        if (adminUser) assignedOwnerId = adminUser.id;
+      }
+    }
+
     const opportunity = manager.create(Opportunity, {
       code: `OPP-${Date.now().toString().slice(-6)}`,
       companyId: assignedCompanyId,
       propertyId: savedPredio.id,
       createdByUserId: user.id,
-      currentOwnerUserId: user.id,
+      currentOwnerUserId: assignedOwnerId,
       status: 'OPEN',
-      canalHunting: 'TERRENO',
       leadSourceId: leadSource.id,
       currentStageId: targetStage.id,  // UUID real de la BD
       pipelineId: pipeline.id,          // UUID real de la BD
       currentStageEnteredAt: new Date(),
+      isReferral: dto.isReferral || false,
+      referredHunterName: dto.referredHunterName,
+      partnerSupervisorId: dto.partnerSupervisorId,
     });
     const savedOpportunity = await manager.save(opportunity);
 

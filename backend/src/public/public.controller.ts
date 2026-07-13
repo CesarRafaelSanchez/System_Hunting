@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Patch, Body, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseInterceptors } from '@nestjs/common';
 import { OpportunitiesService } from '../opportunities/opportunities.service';
 import { UsersService } from '../users/users.service';
 import { CreateOpportunityDto } from '../opportunities/dto/create-opportunity.dto';
 import { EntityManager } from 'typeorm';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
+import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 
 import { PrediosService } from '../predios/predios.service';
 import { CreatePredioDto } from '../predios/dto/create-predio.dto';
@@ -28,6 +29,18 @@ export class PublicController {
     }));
   }
 
+  @Get('supervisors')
+  async getSupervisors() {
+    const allUsers = await this.usersService.findAll();
+    // Usually supervisors can be ADMIN, BACKOFFICE, or specifically SUPERVISOR. We return all for the frontend to list them
+    const supervisors = allUsers.filter(u => u.isActive && ['ADMIN', 'BACKOFFICE', 'SUPERVISOR'].includes(u.role));
+    return supervisors.map(s => ({
+      id: s.id,
+      fullName: s.fullName,
+      role: s.role
+    }));
+  }
+
   @Get('opportunities/:id')
   async getOpportunityPublic(@Param('id') id: string, @TransactionManager() manager: EntityManager) {
     // Admin user mock just to bypass companyId filter
@@ -38,10 +51,25 @@ export class PublicController {
   }
 
   @Post('registro-predio')
+  @UseInterceptors(TransactionAuditInterceptor)
   async createOpportunityPublic(
     @Body() dto: any,
     @TransactionManager() manager: EntityManager
   ) {
+    if (dto.isReferral) {
+      if (!dto.referredHunterName || !dto.partnerSupervisorId) {
+        throw new BadRequestException('Datos de referido incompletos');
+      }
+      
+      const mockUser = {
+        id: dto.partnerSupervisorId, // We use supervisor's ID temporarily, predios.service handles isReferral
+        role: 'REFERRAL', 
+        companyId: null
+      };
+
+      return this.prediosService.createPredio(mockUser, dto, manager);
+    }
+
     if (!dto.ejecutivo) {
       throw new BadRequestException('El ID del Hunter (ejecutivo) es requerido.');
     }
@@ -60,6 +88,7 @@ export class PublicController {
   }
 
   @Patch('opportunities/:id/form')
+  @UseInterceptors(TransactionAuditInterceptor)
   async updateOpportunityForm(
     @Param('id') id: string,
     @Body() dto: any,

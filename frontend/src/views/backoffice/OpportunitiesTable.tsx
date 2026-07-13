@@ -134,7 +134,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                     ) : (
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-600 truncate uppercase">
-                          {companiesList?.find((comp: any) => comp.id === c.companyId)?.name || 'Sin Empresa'}
+                          {companiesList?.find((comp: any) => comp.id === c.companyId)?.name || c.company?.name || 'Sin Empresa'}
                         </span>
                         {(userRole === 'ADMIN' || userRole === 'BACKOFFICE') && (
                           <button 

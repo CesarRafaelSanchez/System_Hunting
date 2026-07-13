@@ -69,7 +69,7 @@ export class Opportunity {
   @Column({ length: 30, nullable: true })
   priority: string;
 
-  @Column({ length: 50, name: 'canal_hunting' })
+  @Column({ length: 50, name: 'canal_hunting', nullable: true })
   canalHunting: string;
 
   @Column({ type: 'text', name: 'motivo_cierre', nullable: true })
@@ -95,4 +95,16 @@ export class Opportunity {
 
   @DeleteDateColumn({ type: 'timestamptz', name: 'deleted_at', nullable: true })
   deletedAt: Date;
+  @Column({ name: 'is_referral', type: 'boolean', default: false })
+  isReferral: boolean;
+
+  @Column({ name: 'referred_hunter_name', type: 'varchar', length: 255, nullable: true })
+  referredHunterName: string;
+
+  @Column({ type: 'uuid', name: 'partner_supervisor_id', nullable: true })
+  partnerSupervisorId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'partner_supervisor_id' })
+  partnerSupervisor: User;
 }

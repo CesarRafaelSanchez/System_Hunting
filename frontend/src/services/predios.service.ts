@@ -8,6 +8,10 @@ export interface CreatePredioPayload {
   numeroHPs: number;
   resultadoVisita: string;
   detalle: string;
+  coordenadas?: string;
+  isReferral?: boolean;
+  referredHunterName?: string;
+  partnerSupervisorId?: string;
 }
 
 export const prediosService = {

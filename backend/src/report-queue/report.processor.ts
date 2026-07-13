@@ -38,7 +38,11 @@ export class ReportProcessor extends WorkerHost {
           torres: {
             pisos: true
           }
-        }
+        },
+        currentOwnerUser: {
+          supervisor: true
+        },
+        partnerSupervisor: true
       }
     });
 
@@ -165,7 +169,15 @@ export class ReportProcessor extends WorkerHost {
       },
       matrix: matrixStr,
       matrixList: matrixList,
-      photos: photosPaths
+      photos: photosPaths,
+      isReferral: opportunity.isReferral || false,
+      referredHunterName: opportunity.referredHunterName || 'N/A',
+      partnerSupervisorName: opportunity.partnerSupervisor?.fullName || 'N/A',
+      partnerSupervisorPhone: opportunity.partnerSupervisor?.phone || 'N/A',
+      currentOwnerName: opportunity.currentOwnerUser?.fullName || 'N/A',
+      currentOwnerPhone: opportunity.currentOwnerUser?.phone || 'N/A',
+      currentOwnerSupervisorName: opportunity.currentOwnerUser?.supervisor?.fullName || 'N/A',
+      currentOwnerSupervisorPhone: opportunity.currentOwnerUser?.supervisor?.phone || 'N/A',
     };
 
     if (job.name === 'send-win-request') {

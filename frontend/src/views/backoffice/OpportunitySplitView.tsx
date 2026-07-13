@@ -30,10 +30,10 @@ const convertToInputDateFormat = (val: string) => {
   return val;
 };
 
-const Field = ({ label, name, value, type = "text", colSpan = 1, options }: { label: string, name: string, value: string, type?: string, colSpan?: number, options?: string[] }) => (
+const Field = ({ label, name, value, type = "text", colSpan = 1, options, isReadOnly }: { label: string, name: string, value: string, type?: string, colSpan?: number, options?: string[], isReadOnly?: boolean }) => (
   <div className={colSpan > 1 ? `col-span-${colSpan}` : ''}>
     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</label>
-    {globalIsEditing ? (
+    {globalIsEditing && !isReadOnly ? (
       type === "textarea" ? (
         <textarea name={name} className="w-full border border-ghl-lightBlue rounded px-2 py-1 text-sm mt-1 outline-none focus:ring-1 focus:ring-ghl-blue" value={value} onChange={globalHandleChange} rows={2} />
       ) : type === "select" && options ? (
@@ -56,7 +56,7 @@ const Field = ({ label, name, value, type = "text", colSpan = 1, options }: { la
   </div>
 );
 
-export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; onApprove: (towersData?: any[]) => void; onSave?: () => void }> = ({ card, onClose, onApprove, onSave }) => {
+export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; onApprove: (towersData?: any[]) => void; onSave?: () => void | Promise<void> }> = ({ card, onClose, onApprove, onSave }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('basic_info'); // basic_info, form_2, form_3, photos
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
@@ -104,14 +104,20 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     companyId: card.companyId || card.property?.companyId || '',
     reasignarUserId: card.currentOwnerUserId || '',
     // Form 1
-    ejecutivoF1: card.property?.ejecutivo || card.currentOwnerUser?.fullName || 'Sin Asignar',
+    ejecutivoF1: card.isReferral 
+      ? card.referredHunterName 
+      : ((card.property?.ejecutivo?.length === 36 ? card.currentOwnerUser?.fullName : card.property?.ejecutivo) || card.currentOwnerUser?.fullName || 'Sin Asignar'),
+    isReferralF1: card.isReferral,
+    partnerSupervisorF1: card.partnerSupervisor?.fullName || '-',
     resultadoVisitaF1: card.property?.resultadoVisita || '-',
     detalleVisitaF1: card.property?.detalleVisita || '-',
     direccionExactaF1: card.property?.direccionExacta || '-',
     
     // Form 2
-    hunterF2: card.property?.ejecutivo || card.currentOwnerUser?.fullName || 'Sin Asignar',
-    ingresoF2: hasForm2 ? (card.property?.origenProspeccion || '-') : '-',
+    hunterF2: card.isReferral 
+      ? card.referredHunterName 
+      : ((card.property?.ejecutivo?.length === 36 ? card.currentOwnerUser?.fullName : card.property?.ejecutivo) || card.currentOwnerUser?.fullName || 'Sin Asignar'),
+    ingresoF2: hasForm2 ? (card.property?.origenProspeccion === 'TERRENO' ? 'Propio' : (card.property?.origenProspeccion || '-')) : '-',
     tipoEdificioF2: hasForm2 ? (card.property?.clasificacionProyecto || '-') : '-',
     nombreProyectoF2: card.property?.nombreProyecto || card.title || '-',
     tipoViaF2: card.property?.tipoVia || '-',
@@ -125,25 +131,27 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
       : '-',
     fechaMontantesF2: hasForm2 ? formatDateString(card.property?.terminoMontantes) : '-',
     fechaEntregaF2: hasForm2 ? formatDateString(card.property?.fechaEntrega) : '-',
-    inmobiliariaF2: '-',
+    inmobiliariaF2: card.property?.inmobiliaria || '-',
     asignarF2: 'Asignar',
 
     // Form 3
     nombreCanalF3: hasForm3 ? (card.canalHunting || '-') : '-',
-    ingresoF3: hasForm3 ? (card.property?.origenProspeccion || '-') : '-',
-    hunterF3: card.property?.ejecutivo || card.currentOwnerUser?.fullName || 'Sin Asignar',
+    ingresoF3: hasForm3 ? (card.property?.origenProspeccion === 'TERRENO' ? 'Propio' : (card.property?.origenProspeccion || '-')) : '-',
+    hunterF3: card.isReferral 
+      ? card.referredHunterName 
+      : ((card.property?.ejecutivo?.length === 36 ? card.currentOwnerUser?.fullName : card.property?.ejecutivo) || card.currentOwnerUser?.fullName || 'Sin Asignar'),
     nombreProyectoF3: card.property?.nombreProyecto || card.title || '-',
     tipoProyectoF3: hasForm3 ? (card.property?.tipoDesarrollo || '-') : '-',
-    origenF3: hasForm3 ? (card.property?.origenProspeccion || '-') : '-',
+    origenF3: hasForm3 ? (card.property?.origenProspeccion === 'TERRENO' ? 'Propio' : (card.property?.origenProspeccion || '-')) : '-',
     clasificacionF3: hasForm3 ? (card.property?.clasificacionProyecto || '-') : '-',
     tipoConstruccionF3: hasForm3 
       ? (['SÍ', 'SI', 'Sí', 'Si', 'EN_CONSTRUCCION', 'ESTRENO'].includes(card.property?.estadoConstruccion) ? 'SÍ' : 'NO') 
       : '-',
     juntaDirectivaF3: hasForm3 ? (card.property?.juntaDirectiva || '-') : '-',
-    cargoResponsableF3: '-',
-    nombreResponsableF3: '-',
-    telefonoResponsableF3: '-',
-    correoResponsableF3: '-',
+    cargoResponsableF3: hasForm3 ? (card.property?.cargoResponsable || '-') : '-',
+    nombreResponsableF3: hasForm3 ? (card.property?.nombreResponsable || '-') : '-',
+    telefonoResponsableF3: hasForm3 ? (card.property?.telefonoResponsable || '-') : '-',
+    correoResponsableF3: hasForm3 ? (card.property?.correoResponsable || '-') : '-',
     visitaInspeccionF3: hasForm3 ? formatDateString(card.property?.fechaVisitaTecnica) : '-',
 
     horarioVisitaF3: hasForm3 ? (card.property?.horarioVisita || '-') : '-',
@@ -283,7 +291,8 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     setTowers(towers.filter((_, i) => i !== index));
   };
 
-  const isForm3Stage = card.stage === 13;
+  const isValidationStage = [4, 5, 6, 12, 13, 14].includes(card.stage);
+  const isForm3Stage = [12, 13, 14].includes(card.stage);
 
   globalIsEditing = isEditing;
   globalHandleChange = handleChange;
@@ -378,14 +387,21 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
               <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User className="w-5 h-5 text-ghl-lightBlue"/> Génesis / Registro de Predio</h4>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <Field label="Ejecutivo" name="ejecutivoF1" value={formData.ejecutivoF1} />
+                  <Field label="Tipo de Hunter" name="isReferralF1" value={formData.isReferralF1 ? 'Referido Externo' : 'Hunter Interno'} />
+                  {formData.isReferralF1 ? (
+                    <>
+                      <Field label="Hunter Referido" name="ejecutivoF1" value={formData.ejecutivoF1} />
+                      <Field label="Socio Comercial (Supervisor)" name="partnerSupervisorF1" value={formData.partnerSupervisorF1} />
+                    </>
+                  ) : (
+                    <Field label="Ejecutivo Interno" name="ejecutivoF1" value={formData.ejecutivoF1} />
+                  )}
                   <Field label="Resultado de Visita" name="resultadoVisitaF1" value={formData.resultadoVisitaF1} />
                   <Field label="Detalle de la Visita" name="detalleVisitaF1" value={formData.detalleVisitaF1} type="textarea" colSpan={2} />
-                  <Field label="Origen / Canal" name="origenF3" value={formData.origenF3} />
                   <Field label="Distrito" name="distritoF2" value={formData.distritoF2} />
+                  <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" />
                   <Field label="Dirección Exacta" name="direccionExactaF1" value={formData.direccionExactaF1} colSpan={2} />
                   <Field label="Coordenadas" name="coordenadasF2" value={formData.coordenadasF2} colSpan={2} />
-                  <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" />
                 </div>
               </div>
             )}
@@ -397,13 +413,13 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                   <Field label="Nombre del Hunter" name="hunterF2" value={formData.hunterF2} />
                   <Field label="Ingreso" name="ingresoF2" value={formData.ingresoF2} type="select" options={['Propio', 'Referido']} />
                   <Field label="Tipo de Edificio" name="tipoEdificioF2" value={formData.tipoEdificioF2} type="select" options={['Estreno', 'Moderno', 'Antiguo']} />
-                  <Field label="Nombre del Proyecto" name="nombreProyectoF2" value={formData.nombreProyectoF2} />
-                  <Field label="Tipo de Vía" name="tipoViaF2" value={formData.tipoViaF2} type="select" options={['Avenida', 'Calle', 'Jirón', 'Pasaje']} />
+                  <Field label="Nombre del Proyecto" name="nombreProyectoF2" value={formData.nombreProyectoF2} isReadOnly />
+                  <Field label="Tipo de Vía" name="tipoViaF2" value={formData.tipoViaF2} type="select" options={['Avenida', 'Calle', 'Jirón', 'Pasaje', 'Alameda', 'Malecón', 'Prolongación', 'Carretera', 'Autopista', 'Otro']} />
                   <Field label="Nombre de Vía" name="nombreViaF2" value={formData.nombreViaF2} />
                   <Field label="Numeraciones de Vía" name="numeracionViaF2" value={formData.numeracionViaF2} />
-                  <Field label="Distrito" name="distritoF2" value={formData.distritoF2} />
+                  <Field label="Distrito" name="distritoF2" value={formData.distritoF2} isReadOnly />
                   <Field label="Coordenadas" name="coordenadasF2" value={formData.coordenadasF2} />
-                  <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" />
+                  <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" isReadOnly />
                   <Field label="¿Edificio Estreno?" name="estrenoF2" value={formData.estrenoF2} type="select" options={['SÍ', 'NO']} />
                   {formData.estrenoF2 === 'SÍ' && (
                     <>
@@ -424,14 +440,14 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                     <Field label="Nombre Canal" name="nombreCanalF3" value={formData.nombreCanalF3} />
                     <Field label="Ingreso" name="ingresoF3" value={formData.ingresoF3} type="select" options={['Propio', 'Referido']} />
-                    <Field label="Hunter" name="hunterF3" value={formData.hunterF3} />
+                    <Field label="Hunter" name="hunterF3" value={formData.hunterF3} isReadOnly />
                     
-                    <Field label="Nombre Proyecto" name="nombreProyectoF3" value={formData.nombreProyectoF3} colSpan={2} />
-                    <Field label="Tipo Proyecto" name="tipoProyectoF3" value={formData.tipoProyectoF3} type="select" options={['Estreno', 'Moderno', 'Antiguo']} />
+                    <Field label="Nombre Proyecto" name="nombreProyectoF3" value={formData.nombreProyectoF3} colSpan={2} isReadOnly />
+                    <Field label="Tipo Proyecto" name="tipoProyectoF3" value={formData.tipoProyectoF3} type="select" options={['Estreno', 'Moderno', 'Antiguo']} isReadOnly />
                     
-                    <Field label="Fuente / Origen" name="origenF3" value={formData.origenF3} />
-                    <Field label="Clasificación" name="clasificacionF3" value={formData.clasificacionF3} />
-                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} />
+                    <Field label="Fuente / Origen" name="origenF3" value={formData.origenF3} isReadOnly />
+                    <Field label="Clasificación" name="clasificacionF3" value={formData.clasificacionF3} isReadOnly />
+                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} isReadOnly />
                     
                     <Field label="Junta Directiva" name="juntaDirectivaF3" value={formData.juntaDirectivaF3} type="select" options={['Sí', 'No']} />
                     <Field label="Cargo Responsable" name="cargoResponsableF3" value={formData.cargoResponsableF3} />
@@ -445,19 +461,19 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
 
                     <Field label="Departamento" name="departamentoF3" value={formData.departamentoF3} />
                     <Field label="Provincia" name="provinciaF3" value={formData.provinciaF3} />
-                    <Field label="Distrito" name="distritoF3" value={formData.distritoF3} />
+                    <Field label="Distrito" name="distritoF3" value={formData.distritoF3} isReadOnly />
 
                     <Field label="Urbanización" name="urbanizacionF3" value={formData.urbanizacionF3} colSpan={2} />
                     <Field label="Cod. Postal" name="codigoPostalF3" value={formData.codigoPostalF3} />
 
-                    <Field label="Tipo Vía" name="tipoViaF3" value={formData.tipoViaF3} />
-                    <Field label="Nombre Vía" name="nombreViaF3" value={formData.nombreViaF3} />
-                    <Field label="Numeración" name="numeracionViaF3" value={formData.numeracionViaF3} />
+                    <Field label="Tipo Vía" name="tipoViaF3" value={formData.tipoViaF3} isReadOnly />
+                    <Field label="Nombre Vía" name="nombreViaF3" value={formData.nombreViaF3} isReadOnly />
+                    <Field label="Numeración" name="numeracionViaF3" value={formData.numeracionViaF3} isReadOnly />
 
-                    <Field label="Coordenadas" name="coordenadasF3" value={formData.coordenadasF3} colSpan={3} />
+                    <Field label="Coordenadas" name="coordenadasF3" value={formData.coordenadasF3} colSpan={3} isReadOnly />
                     
-                    <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" />
-                    <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" />
+                    <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" isReadOnly />
+                    <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" isReadOnly />
                     <Field label="Nro Interesados" name="clientesInteresadosF3" value={formData.clientesInteresadosF3} type="number" />
                   </div>
                 </div>
@@ -637,7 +653,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                 {isEditing ? 'Guardar Cambios' : 'Editar Datos'}
               </button>
 
-              {isForm3Stage && (
+              {isValidationStage && (
                 <button 
                   className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
                   onClick={() => {
@@ -687,7 +703,10 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                         const { opportunitiesService } = await import('../../services/opportunities.service');
                         await opportunitiesService.transitionStage(card.id, 'S2');
                         toast.success('Prospecto marcado como Aceptado');
-                        if (onSave) onSave();
+                        // Add a small delay to ensure DB transaction is fully committed and visible to subsequent queries
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        if (onSave) await onSave();
+                        onClose(); // Automatically close the modal so user can see it move
                       } catch (e) {
                         toast.error('Error al actualizar etapa');
                       }
@@ -702,7 +721,9 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                         const { opportunitiesService } = await import('../../services/opportunities.service');
                         await opportunitiesService.transitionStage(card.id, 'S3');
                         toast.success('Prospecto marcado como Rechazado');
-                        if (onSave) onSave();
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        if (onSave) await onSave();
+                        onClose(); // Automatically close the modal so user can see it move
                       } catch (e) {
                         toast.error('Error al actualizar etapa');
                       }

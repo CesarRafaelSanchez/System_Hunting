@@ -84,4 +84,15 @@ export class CreatePredioDto {
   @IsString()
   @IsOptional()
   initialStageCode?: string;
+
+  @IsOptional()
+  isReferral?: boolean;
+
+  @IsString()
+  @IsOptional()
+  referredHunterName?: string;
+
+  @IsString()
+  @IsOptional()
+  partnerSupervisorId?: string;
 }

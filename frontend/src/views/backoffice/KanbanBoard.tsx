@@ -48,6 +48,13 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
           <span className="text-sm font-bold text-slate-900 leading-tight truncate max-w-[200px]" title={p.nombreProyecto || card.title}>
             {p.nombreProyecto || card.title || 'SIN NOMBRE'}
           </span>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[150px]">
+              {card.canalHunting || 'FUTURA'}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
           {isEditingCompany ? (
             <select 
               className="text-[10px] bg-slate-50 border border-slate-200 mt-0.5 rounded px-1 py-0.5 outline-none text-slate-600" 
@@ -62,9 +69,13 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
                {companiesList?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           ) : (
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[150px]">
-                {companiesList?.find((c: any) => c.id === card.companyId)?.name || 'Sin Empresa'}
+            <div className="flex items-center gap-1">
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
+                card.companyId || card.company?.name
+                  ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                  : 'bg-gray-50 text-gray-700 border-gray-200'
+              }`}>
+                {companiesList?.find((c: any) => c.id === card.companyId)?.name || card.company?.name || 'SIN EMPRESA'}
               </span>
               {(role === 'ADMIN' || role === 'BACKOFFICE') && (
                 <button 
@@ -77,13 +88,6 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
             </div>
           )}
         </div>
-        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
-          card.canalHunting === 'FUTURA' 
-            ? 'bg-blue-50 text-blue-700 border-blue-200' 
-            : 'bg-purple-50 text-purple-700 border-purple-200'
-        }`}>
-          {card.canalHunting || 'FUTURA'}
-        </span>
       </div>
 
       <div className="border-t border-slate-50 my-2"></div>

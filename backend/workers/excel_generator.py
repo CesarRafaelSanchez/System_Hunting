@@ -5,6 +5,7 @@ import os
 try:
     import openpyxl
     from openpyxl.drawing.image import Image
+    from openpyxl.styles import Border, Side, Alignment, PatternFill
 except ImportError:
     # MVP fallback if openpyxl is not installed natively
     print(json.dumps({"status": "error", "message": "openpyxl not installed"}))
@@ -138,30 +139,88 @@ def generate_excel(payload_json):
             matrix_list = [matrix_data]
             
         col_letters = ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+        
+        # 6. CANAL / AGENCIA
+        safe_write(ws, 'C58', str(data.get('canalHunting', '')).upper())
+        
+        # 7. GESTOR Y SUPERVISOR
+        is_referral = data.get('isReferral', False)
+        if is_referral:
+            safe_write(ws, 'C62', str(data.get('referredHunterName', '')).upper()) # NOMBRE DEL HUNTER
+            safe_write(ws, 'C63', 'N/A') # CELULAR DEL HUNTER
+            safe_write(ws, 'C66', str(data.get('partnerSupervisorName', '')).upper()) # NOMBRE DEL SUPERVISOR
+            safe_write(ws, 'C67', str(data.get('partnerSupervisorPhone', ''))) # CELULAR DEL SUPERVISOR
+        else:
+            safe_write(ws, 'C62', str(data.get('currentOwnerName', '')).upper()) # NOMBRE DEL HUNTER
+            safe_write(ws, 'C63', str(data.get('currentOwnerPhone', ''))) # CELULAR DEL HUNTER
+            safe_write(ws, 'C66', str(data.get('currentOwnerSupervisorName', '')).upper()) # NOMBRE DEL SUPERVISOR
+            safe_write(ws, 'C67', str(data.get('currentOwnerSupervisorPhone', ''))) # CELULAR DEL SUPERVISOR
+
+        current_row = 59
+        extra_rows_inserted = 0
+        
+        thin_border = Border(top=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+        header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid") # Gris claro
+
         for idx, tower_matrix in enumerate(matrix_list):
             if idx >= 4: break # El Excel de ejemplo soporta hasta 4 torres
             
-            row_num = 59 + (idx * 3)
-            # Escribir la etiqueta de TORRE (por ejemplo, A61 = TORRE 2)
-            safe_write(ws, f'A{row_num - 1}', f'TORRE {idx + 1}')
-            
             pisos = [p.strip() for p in str(tower_matrix).split(',') if p.strip()]
-            for i, p in enumerate(pisos):
-                if i >= len(col_letters): break
-                # Escribir número de piso (por ejemplo, C61 = 1)
-                safe_write(ws, f'{col_letters[i]}{row_num - 1}', i + 1)
+            if not pisos:
+                pisos = ['0'] # Fallback
                 
-                # Escribir hogares por piso (por ejemplo, C62 = 4)
-                try:
-                    val = int(p)
-                except ValueError:
-                    val = 0
-                safe_write(ws, f'{col_letters[i]}{row_num}', val)
+            # Dividir en chunks de 10
+            chunks = [pisos[i:i + 10] for i in range(0, len(pisos), 10)]
+            
+            for chunk_idx, chunk in enumerate(chunks):
+                if chunk_idx > 0:
+                    ws.insert_rows(current_row - 1, 3)
+                    extra_rows_inserted += 3
+                    
+                # Escribir la etiqueta de TORRE (por ejemplo, A58 = TORRE 1)
+                label = f'TORRE {idx + 1}'
+                if chunk_idx > 0:
+                    label += f' (cont. {chunk_idx + 1})'
+                safe_write(ws, f'A{current_row - 1}', label)
+                
+                # Iterar sobre las 10 columnas
+                for i in range(10):
+                    col_letter = col_letters[i]
+                    cell_piso = f'{col_letter}{current_row - 1}'
+                    cell_hogares = f'{col_letter}{current_row}'
+                    
+                    if i < len(chunk):
+                        # Escribir número de piso
+                        piso_num = (chunk_idx * 10) + i + 1
+                        safe_write(ws, cell_piso, piso_num)
+                        
+                        # Escribir hogares por piso
+                        try:
+                            val = int(chunk[i])
+                        except ValueError:
+                            val = 0
+                        safe_write(ws, cell_hogares, val)
+                    else:
+                        # Rellenar con N/A
+                        safe_write(ws, cell_piso, 'N/A')
+                        safe_write(ws, cell_hogares, 'N/A')
+                    
+                    # Aplicar estilos básicos si es una fila insertada para que no se vea desordenado
+                    if chunk_idx > 0:
+                        ws[cell_piso].border = thin_border
+                        ws[cell_piso].alignment = center_align
+                        ws[cell_piso].fill = header_fill
+                        
+                        ws[cell_hogares].border = thin_border
+                        ws[cell_hogares].alignment = center_align
+                        
+            current_row += 3
             
         # Incrustar imágenes físicamente
-        # Fachada goes into A80 (covers A80:E102)
-        # Montantes goes into F80 (covers F80:M102)
-        cells = ['A80', 'F80']
+        # Las fotos ahora deben considerar el desplazamiento de filas extra insertadas
+        photo_row = 80 + extra_rows_inserted
+        cells = [f'A{photo_row}', f'F{photo_row}']
         for idx, photo_path in enumerate(photos):
             if idx >= len(cells): break
             cell = cells[idx]

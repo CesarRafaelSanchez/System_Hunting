@@ -27,6 +27,12 @@ export const ValidacionExpedientes: React.FC = () => {
     fetchOpps();
   }, []);
 
+  const getStageNum = (o: any) => {
+    if (typeof o.stage === 'number') return o.stage;
+    if (o.currentStage?.position) return o.currentStage.position - 1;
+    return 0;
+  };
+
   const getFilteredData = () => {
     let filtered = opportunities;
 
@@ -40,15 +46,15 @@ export const ValidacionExpedientes: React.FC = () => {
 
     if (activeTab === 'PENDIENTES') {
       // Form 2 and Form 3 completed, waiting for BO validation
-      return filtered.filter(o => [4, 5, 12, 13].includes(o.stage || (o.currentStageId ? 0 : 0)));
+      return filtered.filter(o => [4, 5, 12, 13].includes(getStageNum(o)));
     }
     if (activeTab === 'OBSERVADOS') {
       // Rejected, returned
-      return filtered.filter(o => [9, 10, 2].includes(o.stage || (o.currentStageId ? 0 : 0)));
+      return filtered.filter(o => [9, 10, 2].includes(getStageNum(o)));
     }
     if (activeTab === 'APROBADOS') {
       // Sent to WIN, approved, habilitation
-      return filtered.filter(o => [6, 7, 8, 14, 15, 16, 17, 18].includes(o.stage || (o.currentStageId ? 0 : 0)));
+      return filtered.filter(o => [6, 7, 8, 14, 15, 16, 17, 18].includes(getStageNum(o)));
     }
     
     return filtered;
@@ -113,7 +119,7 @@ export const ValidacionExpedientes: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentData.map(opp => {
-              const stageNum = opp.stage || (opp.currentStageId ? 0 : 0);
+              const stageNum = getStageNum(opp);
               const stageName = [4, 5, 9, 10, 6, 7].includes(stageNum) ? 'Formulario Asignación' : 
                                ([12, 13, 2, 14, 15].includes(stageNum) ? 'Ficha de Datos' : 'Otro');
               

@@ -13,6 +13,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
   const { user } = useAuthStore();
   const isPublic = !user;
   const [isUploading, setIsUploading] = useState(false);
+  const [isLockedEstreno, setIsLockedEstreno] = useState(false);
   
   const [formData, setFormData] = useState({
     nombreCanal: '',
@@ -20,7 +21,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     hunterReferido: '',
     nombreHunter: user?.id || '',
     nombreProyecto: '',
-    tipoProyecto: '',
+    tipoProyecto: 'Nuevo Predio',
     fuente: '',
     clasificacion: '',
     tipoConstruccion: '',
@@ -58,7 +59,16 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     const fetchOpportunityData = async () => {
       const draft = getDraft(`form3-${opportunityId}`);
       if (draft) {
-        setFormData(draft.formData || formData);
+        let loadedData = draft.formData || formData;
+        // Sanitize legacy draft data
+        if (loadedData.ingreso === 'TERRENO') {
+          loadedData.ingreso = 'Propio';
+        }
+        if (loadedData.nombreHunter === user?.id || !loadedData.nombreHunter || loadedData.nombreHunter.length === 36) { // length 36 is UUID length
+          loadedData.nombreHunter = user?.fullName || 'Hunter';
+        }
+        
+        setFormData(loadedData);
         setTowers(draft.towers || towers);
         return;
       }
@@ -84,13 +94,13 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
           setFormData(prev => ({
             ...prev,
             nombreCanal: opp.canalHunting || '',
-            ingreso: prop.origenProspeccion || prop.ingreso || '',
-            hunterReferido: '', // We don't have the explicit referer field in the prop yet, we leave it ready
-            nombreHunter: user?.id || opp.currentOwnerUserId || '',
+            ingreso: (prop.origenProspeccion && prop.origenProspeccion !== 'TERRENO') ? prop.origenProspeccion : 'Propio',
+            hunterReferido: opp.referredHunterName || '', 
+            nombreHunter: user?.fullName || opp.currentOwnerUser?.fullName || user?.id || opp.currentOwnerUserId || '',
             nombreProyecto: prop.nombreProyecto || '',
-            tipoProyecto: prop.tipoDesarrollo || '',
+            tipoProyecto: prop.tipoDesarrollo || 'Nuevo Predio',
             clasificacion: prop.clasificacionProyecto || '',
-            tipoConstruccion: prop.estadoConstruccion === 'Sí' ? 'Estreno' : (prop.estadoConstruccion || ''),
+            tipoConstruccion: (prop.estadoConstruccion === 'Sí' || prop.estadoConstruccion === 'ESTRENO') ? 'Estreno' : (prop.estadoConstruccion || ''),
             fechaEntrega: prop.fechaEntrega ? new Date(prop.fechaEntrega).toISOString().split('T')[0] : '',
             fechaMontantes: prop.terminoMontantes ? new Date(prop.terminoMontantes).toISOString().split('T')[0] : '',
             inmobiliaria: prop.inmobiliaria || '',
@@ -108,6 +118,36 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             totalHogares: prop.totalHogares?.toString() || '',
             totalTorres: prop.totalTorres?.toString() || '1',
           }));
+
+          if (prop.torres && prop.torres.length > 0) {
+            const parsedTowers = prop.torres.map((t: any) => {
+              const maxPiso = t.pisos && t.pisos.length > 0 ? Math.max(...t.pisos.map((p: any) => p.numeroPiso)) : 1;
+              const hogaresPorPiso = Array(maxPiso).fill(0);
+              if (t.pisos) {
+                t.pisos.forEach((p: any) => {
+                  if (p.numeroPiso > 0 && p.numeroPiso <= maxPiso) {
+                    hogaresPorPiso[p.numeroPiso - 1] = p.hogaresCantidad || 0;
+                  }
+                });
+              }
+              return {
+                nombre_torre: t.nombreTorre || 'Torre 1',
+                pisos_torre: String(maxPiso),
+                hogares_por_piso: hogaresPorPiso
+              };
+            });
+            setTowers(parsedTowers);
+          } else if (prop.totalHogares > 0) {
+            setTowers([{
+              nombre_torre: 'Torre 1',
+              pisos_torre: '1',
+              hogares_por_piso: [prop.totalHogares]
+            }]);
+          }
+
+          if (prop.estadoConstruccion === 'ESTRENO' || prop.estadoConstruccion === 'Sí') {
+            setIsLockedEstreno(true);
+          }
         }
       } catch (e) {
         console.error('Error pre-filling Form3', e);
@@ -297,17 +337,78 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
         {step === 1 && (
           <div>
             <h3 className={styles.stepTitle}>Datos Generales</h3>
+
             <div className={styles.formGroup}>
+              <label className={styles.label}>Tipo (Edificio/Condominio) *</label>
+              <input name="clasificacion" value={formData.clasificacion || 'Edificio'} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Nombre del (Edificio/Condominio) *</label>
+              <input name="nombreProyecto" value={formData.nombreProyecto} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Nombre del proyecto" />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Dirección *</label>
+              <input value={`${formData.tipoVia} ${formData.nombreVia} ${formData.numeracionVia}`.trim()} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Distrito *</label>
+              <input name="distrito" value={formData.distrito} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Coordenadas *</label>
+              <input name="coordenadas" value={formData.coordenadas} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Para Estrenos: SI o NO *</label>
+              {isLockedEstreno ? (
+                <div style={{display:'flex', gap:'15px'}}>
+                  <label><input type="radio" checked={true} readOnly /> SI</label>
+                  <label><input type="radio" disabled /> NO</label>
+                </div>
+              ) : (
+                <div style={{display:'flex', gap:'15px'}}>
+                  <label><input type="radio" name="tipoConstruccion" value="Estreno" checked={formData.tipoConstruccion === 'Estreno'} onChange={handleChange} required /> SI</label>
+                  <label><input type="radio" name="tipoConstruccion" value="Moderno" checked={formData.tipoConstruccion !== 'Estreno' && formData.tipoConstruccion !== ''} onChange={() => handleChange({ target: { name: 'tipoConstruccion', value: 'Moderno' } } as any)} required /> NO</label>
+                </div>
+              )}
+            </div>
+
+            {formData.tipoConstruccion === 'Estreno' && (
+              <div style={{ padding: '15px', backgroundColor: '#f0f9ff', borderRadius: '8px', marginTop: '15px', marginBottom: '15px' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#0369a1', fontSize: '14px' }}>Si es de estreno</h4>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha de entrega a propietarios *</label>
+                  <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha término de montantes y mecha *</label>
+                  <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Inmobiliaria *</label>
+                  <input type="text" name="inmobiliaria" value={formData.inmobiliaria} onChange={handleChange} className={styles.input} required placeholder="Nombre de la Inmobiliaria" />
+                </div>
+              </div>
+            )}
+
+            <div className={styles.formGroup} style={{marginTop: '20px'}}>
               <label className={styles.label}>Nombre de Canal *</label>
               <div style={{display:'flex', gap:'15px'}}>
                 <label><input type="radio" name="nombreCanal" value="FUTURA" checked={formData.nombreCanal === 'FUTURA'} onChange={handleChange} required /> FUTURA</label>
                 <label><input type="radio" name="nombreCanal" value="NOVACORE" checked={formData.nombreCanal === 'NOVACORE'} onChange={handleChange} required /> NOVACORE</label>
               </div>
             </div>
+            
             <div className={styles.formGroup}>
-              <label className={styles.label}>Ingreso *</label>
-              <input name="ingreso" value={formData.ingreso} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
+              <label className={styles.label}>Fuente / Origen *</label>
+              <input name="fuente" value={formData.ingreso} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
             </div>
+
             {formData.ingreso === 'Referido' && (
               <div className={styles.formGroup}>
                 <label className={styles.label}>Hunter Referido *</label>
@@ -321,10 +422,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                 <span>{formData.nombreHunter || 'Hunter'}</span>
               </div>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Nombre del Proyecto/Edificio *</label>
-              <input name="nombreProyecto" value={formData.nombreProyecto} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="VERIFICAR SI ESTA BIEN ESCRITO" />
-            </div>
+            
             <div className={styles.formGroup}>
               <label className={styles.label}>Tipo de Proyecto *</label>
               <select name="tipoProyecto" value={formData.tipoProyecto} onChange={handleChange} className={styles.select} required>
@@ -333,48 +431,6 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                 <option value="Ampliación de Torre">Ampliación de Torre</option>
               </select>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Fuente / Origen *</label>
-              <select name="fuente" value={formData.fuente} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir la Fuente</option>
-                <option value="Propio">Propio</option>
-              </select>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Clasificación *</label>
-              <select name="clasificacion" value={formData.clasificacion} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir la Clasificación</option>
-                <option value="Edificio">Edificio (1-2 torres)</option>
-                <option value="Condominio">Condominio (3+ torres)</option>
-              </select>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Tipo de Construcción *</label>
-              <select name="tipoConstruccion" value={formData.tipoConstruccion} onChange={handleChange} className={styles.select} required>
-                <option value="">Elegir el Tipo de Construcción</option>
-                <option value="Estreno">Estreno</option>
-                <option value="Moderno">Moderno</option>
-                <option value="Antiguo">Antiguo</option>
-              </select>
-            </div>
-            
-            {formData.tipoConstruccion === 'Estreno' && (
-              <div style={{ padding: '15px', backgroundColor: '#f0f9ff', borderRadius: '8px', marginTop: '15px' }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#0369a1', fontSize: '14px' }}>Confirmación de Datos Técnicos (Estreno)</h4>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Fecha de Entrega a Propietarios *</label>
-                  <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Fecha de Montantes y Acometidas *</label>
-                  <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Inmobiliaria *</label>
-                  <input type="text" name="inmobiliaria" value={formData.inmobiliaria} onChange={handleChange} className={styles.input} required placeholder="Nombre de la Inmobiliaria" />
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -431,10 +487,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                 <input name="provincia" value="Lima" readOnly className={styles.input} style={{backgroundColor:'#eee'}}/>
               </div>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Distrito *</label>
-              <input name="distrito" value={formData.distrito} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
-            </div>
+            
             <div className={styles.formGroup}>
               <label className={styles.label}>Urbanización *</label>
               <input name="urbanizacion" value={formData.urbanizacion} onChange={handleChange} className={styles.input} required placeholder="Escribir nombre de la Urbanización" />
@@ -443,22 +496,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
               <label className={styles.label}>Código Postal *</label>
               <input name="codigoPostal" value={formData.codigoPostal} onChange={handleChange} className={styles.input} required placeholder="Colocar el codigo postal , Ejem: 15419" />
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Tipo de Vía *</label>
-              <input name="tipoVia" value={formData.tipoVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Nombre de Vía *</label>
-              <input name="nombreVia" value={formData.nombreVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir el nombre de la via" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Numeración de Vía *</label>
-              <input name="numeracionVia" value={formData.numeracionVia} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Escribir la numeracion de la via" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Coordenadas *</label>
-              <input name="coordenadas" value={formData.coordenadas} readOnly className={`${styles.input} bg-gray-100 cursor-not-allowed`} required placeholder="Colocar las coordenadas exactas EJEM: (-12.1, -77.1)" />
-            </div>
+            
           </div>
         )}
 

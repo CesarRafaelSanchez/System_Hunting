@@ -22,8 +22,7 @@ export const Form1Registro: React.FC = () => {
     distrito: '',
     numeroHPs: '',
     resultadoVisita: '',
-    detalle: '',
-    coordenadas: ''
+    detalle: ''
   });
 
   useEffect(() => {
@@ -39,19 +38,6 @@ export const Form1Registro: React.FC = () => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
     setFormData(newFormData);
     saveDraft('form1', newFormData);
-  };
-
-  const captureLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const coords = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-        handleChange({ target: { name: 'coordenadas', value: coords } } as any);
-      }, (err) => {
-        toast.error('Error capturando ubicación: ' + err.message);
-      });
-    } else {
-      toast.error('Geolocalización no soportada por el navegador.');
-    }
   };
 
   const nextStep = () => setStep(s => s + 1);
@@ -72,14 +58,14 @@ export const Form1Registro: React.FC = () => {
       toast.success('Predio registrado correctamente');
       clearDraft('form1');
       setStep(1);
-      setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '', coordenadas: '' });
+      setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '' });
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError') || !navigator.onLine) {
         await addToSyncQueue('/predios', 'POST', formData);
         toast.warning('Sin conexión. Los datos se guardaron localmente y se enviarán automáticamente al recuperar la señal.');
         clearDraft('form1');
         setStep(1);
-        setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '', coordenadas: '' });
+        setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '' });
       } else {
         toast.error('Error al registrar predio: ' + error.message);
       }
@@ -147,13 +133,6 @@ export const Form1Registro: React.FC = () => {
             <div className={styles.formGroup}>
               <label className={styles.label}>Número de HPs *</label>
               <input type="number" name="numeroHPs" value={formData.numeroHPs} onChange={handleChange} className={styles.input} required min="1" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Coordenadas Geográficas *</label>
-              <div style={{display:'flex', gap:'10px'}}>
-                <input name="coordenadas" value={formData.coordenadas} onChange={handleChange} className={styles.input} required placeholder="Ej: -12.0397, -77.0372" />
-                <button type="button" onClick={captureLocation} className={`${styles.button} ${styles.btnBack}`} style={{margin:0, width:'auto', padding:'0 15px'}}>📍 GPS</button>
-              </div>
             </div>
           </div>
         )}
