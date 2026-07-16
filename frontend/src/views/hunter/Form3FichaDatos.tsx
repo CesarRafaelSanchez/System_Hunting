@@ -84,7 +84,14 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
           const getCoordinates = () => {
             const gps = prop.coordenadasGps;
             if (!gps) return '';
-            if (typeof gps === 'string') return gps.replace(/[()]/g, '');
+            if (typeof gps === 'string') {
+              const parts = gps.replace(/[()]/g, '').split(',');
+              if (parts.length === 2) {
+                // Postgres returns (x,y) -> (lng,lat). We want lat,lng -> y,x
+                return `${parts[1].trim()}, ${parts[0].trim()}`;
+              }
+              return gps.replace(/[()]/g, '');
+            }
             if (typeof gps === 'object' && gps.x !== undefined && gps.y !== undefined) {
               return `${gps.y}, ${gps.x}`;
             }

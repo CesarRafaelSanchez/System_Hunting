@@ -59,7 +59,12 @@ export class ReportProcessor extends WorkerHost {
     if (opportunity.property?.coordenadasGps) {
       const gps = opportunity.property.coordenadasGps;
       if (typeof gps === 'string') {
-        coordenadasStr = gps.replace(/[()]/g, '');
+        const parts = gps.replace(/[()]/g, '').split(',');
+        if (parts.length === 2) {
+          coordenadasStr = `${parts[1].trim()}, ${parts[0].trim()}`;
+        } else {
+          coordenadasStr = gps.replace(/[()]/g, '');
+        }
       } else if (typeof gps === 'object' && gps.x !== undefined && gps.y !== undefined) {
         coordenadasStr = `${gps.y}, ${gps.x}`;
       }

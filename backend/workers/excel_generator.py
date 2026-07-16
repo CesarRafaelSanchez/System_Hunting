@@ -47,12 +47,12 @@ def generate_excel(payload_json):
         # Inyectando campos validados en MAYÚSCULAS
         safe_write(ws, 'C5', nombre_proyecto) # NOMBRE DEL EDIFICIO/CONDOMINIO (C5:M5)
         
-        # 1. TIPO DE PROYECTO (H8: NUEVO PREDIO, M8: AMPLIACION DE TORRE)
+        # 1. TIPO DE PROYECTO (F8: NUEVO PREDIO, L8: AMPLIACION DE TORRE)
         tipo_desarrollo = str(property_data.get('tipoDesarrollo', '')).upper()
         if 'AMPLIACION' in tipo_desarrollo or 'CONDOMINIO' in tipo_desarrollo:
-            safe_write(ws, 'M8', 'X')
+            safe_write(ws, 'L8', 'X')
         else:
-            safe_write(ws, 'H8', 'X')
+            safe_write(ws, 'F8', 'X')
             
         # 2. FUENTE/ORIGEN (E12: PROPIO, M12: REFERIDO)
         origen = str(property_data.get('origen', '')).upper()
@@ -100,18 +100,6 @@ def generate_excel(payload_json):
             safe_write(ws, 'I31', 'X')
             safe_write(ws, 'E31', '')
 
-        # 5. DIRECCION Y COORDENADAS
-        safe_write(ws, 'C46', str(property_data.get('tipoVia', '')).upper()) # TIPO VIA
-        safe_write(ws, 'C47', str(property_data.get('nombreVia', '')).upper()) # NOMBRE VIA
-        safe_write(ws, 'C48', str(property_data.get('numeracion', '')).upper()) # NUMERO VIA
-        
-        safe_write(ws, 'C44', str(property_data.get('distrito', '')).upper()) # DISTRITO (C44:E44)
-        safe_write(ws, 'C45', str(property_data.get('codigoPostal', ''))) # CODIGO POSTAL (C45)
-        safe_write(ws, 'C49', str(property_data.get('coordenadas', ''))) # COORDENADAS (C49:M49)
-        
-        safe_write(ws, 'C53', total_torres) # TOTAL TORRES
-        safe_write(ws, 'C54', int(property_data.get('totalHogares', 0))) # TOTAL HOGARES
-        
         # RESPONSABLE
         safe_write(ws, 'D34', str(property_data.get('cargoResponsable', '')).upper()) # CARGO
         safe_write(ws, 'I34', str(property_data.get('responsable', '')).upper()) # NOMBRE
@@ -130,6 +118,20 @@ def generate_excel(payload_json):
         else:
             safe_write(ws, 'I39', '')
             safe_write(ws, 'L39', '')
+
+        # 5. DIRECCION Y COORDENADAS
+        safe_write(ws, 'C43', str(property_data.get('departamento', '')).upper()) # DEPARTAMENTO
+        safe_write(ws, 'I43', str(property_data.get('provincia', '')).upper()) # PROVINCIA
+        safe_write(ws, 'C44', str(property_data.get('distrito', '')).upper()) # DISTRITO
+        safe_write(ws, 'I44', str(property_data.get('urbanizacion', '')).upper()) # URBANIZACION
+        safe_write(ws, 'C45', str(property_data.get('codigoPostal', ''))) # CODIGO POSTAL
+        safe_write(ws, 'C46', str(property_data.get('tipoVia', '')).upper()) # TIPO VIA
+        safe_write(ws, 'C47', str(property_data.get('nombreVia', '')).upper()) # NOMBRE VIA
+        safe_write(ws, 'C48', str(property_data.get('numeracion', '')).upper()) # NUMERO VIA
+        safe_write(ws, 'C49', str(property_data.get('coordenadas', ''))) # COORDENADAS
+        
+        safe_write(ws, 'C53', total_torres) # TOTAL TORRES
+        safe_write(ws, 'C54', int(property_data.get('totalHogares', 0))) # TOTAL HOGARES
             
         # Matriz de Torres Relacional
         matrix_list = property_data.get('matrixList', []) if isinstance(property_data, dict) else []
@@ -139,88 +141,77 @@ def generate_excel(payload_json):
             matrix_list = [matrix_data]
             
         col_letters = ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+        bloques_filas = [58, 61, 64, 67]
+        bloque_idx = 0
         
+        towers = []
+        for idx, tower_matrix in enumerate(matrix_list):
+            if idx >= 4: break
+            pisos = [p.strip() for p in str(tower_matrix).split(',') if p.strip()]
+            if not pisos: continue
+            
+            hogares_list = []
+            for p in pisos:
+                try:
+                    hogares_list.append(int(p))
+                except ValueError:
+                    hogares_list.append(0)
+            
+            towers.append({
+                "name": str(idx + 1),
+                "pisos": len(pisos),
+                "hogares_list": hogares_list
+            })
+            
+        for t in towers:
+            pisos_restantes = t["pisos"]
+            hogares_restantes = list(t["hogares_list"])
+            tower_block_num = 0
+
+            while pisos_restantes > 0 and bloque_idx < len(bloques_filas):
+                row_start = bloques_filas[bloque_idx]
+
+                if tower_block_num == 0:
+                    safe_write(ws, f"A{row_start}", f"TORRE {t['name']}")
+                else:
+                    safe_write(ws, f"A{row_start}", "")
+
+                safe_write(ws, f"B{row_start}", "PISO :")
+                safe_write(ws, f"B{row_start+1}", "HOGARES POR PISO")
+
+                for c in range(10):
+                    col_letter = col_letters[c]
+                    floor_in_block = tower_block_num * 10 + (c + 1)
+
+                    safe_write(ws, f"{col_letter}{row_start}", floor_in_block)
+
+                    if floor_in_block <= t["pisos"]:
+                        h_val = hogares_restantes[floor_in_block - 1]
+                        safe_write(ws, f"{col_letter}{row_start+1}", h_val)
+                    else:
+                        safe_write(ws, f"{col_letter}{row_start+1}", "N/A")
+
+                safe_write(ws, f"M{row_start}", "TOTAL")
+                ws[f"M{row_start+1}"] = f"=SUM(C{row_start+1}:L{row_start+1})"
+
+                pisos_restantes -= 10
+                tower_block_num += 1
+                bloque_idx += 1
+                
         # 6. CANAL / AGENCIA
-        safe_write(ws, 'C58', str(data.get('canalHunting', '')).upper())
+        safe_write(ws, 'C72', str(data.get('canalHunting', '')).upper())
         
         # 7. GESTOR Y SUPERVISOR
         is_referral = data.get('isReferral', False)
         if is_referral:
-            safe_write(ws, 'C62', str(data.get('referredHunterName', '')).upper()) # NOMBRE DEL HUNTER
-            safe_write(ws, 'C63', 'N/A') # CELULAR DEL HUNTER
-            safe_write(ws, 'C66', str(data.get('partnerSupervisorName', '')).upper()) # NOMBRE DEL SUPERVISOR
-            safe_write(ws, 'C67', str(data.get('partnerSupervisorPhone', ''))) # CELULAR DEL SUPERVISOR
+            safe_write(ws, 'C75', str(data.get('referredHunterName', '')).upper()) # NOMBRE DEL HUNTER
+            safe_write(ws, 'I75', 'N/A') # CELULAR DEL HUNTER
         else:
-            safe_write(ws, 'C62', str(data.get('currentOwnerName', '')).upper()) # NOMBRE DEL HUNTER
-            safe_write(ws, 'C63', str(data.get('currentOwnerPhone', ''))) # CELULAR DEL HUNTER
-            safe_write(ws, 'C66', str(data.get('currentOwnerSupervisorName', '')).upper()) # NOMBRE DEL SUPERVISOR
-            safe_write(ws, 'C67', str(data.get('currentOwnerSupervisorPhone', ''))) # CELULAR DEL SUPERVISOR
+            safe_write(ws, 'C75', str(data.get('currentOwnerName', '')).upper()) # NOMBRE DEL HUNTER
+            safe_write(ws, 'I75', str(data.get('currentOwnerPhone', ''))) # CELULAR DEL HUNTER
 
-        current_row = 59
-        extra_rows_inserted = 0
-        
-        thin_border = Border(top=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), bottom=Side(style='thin'))
-        center_align = Alignment(horizontal='center', vertical='center')
-        header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid") # Gris claro
-
-        for idx, tower_matrix in enumerate(matrix_list):
-            if idx >= 4: break # El Excel de ejemplo soporta hasta 4 torres
-            
-            pisos = [p.strip() for p in str(tower_matrix).split(',') if p.strip()]
-            if not pisos:
-                pisos = ['0'] # Fallback
-                
-            # Dividir en chunks de 10
-            chunks = [pisos[i:i + 10] for i in range(0, len(pisos), 10)]
-            
-            for chunk_idx, chunk in enumerate(chunks):
-                if chunk_idx > 0:
-                    ws.insert_rows(current_row - 1, 3)
-                    extra_rows_inserted += 3
-                    
-                # Escribir la etiqueta de TORRE (por ejemplo, A58 = TORRE 1)
-                label = f'TORRE {idx + 1}'
-                if chunk_idx > 0:
-                    label += f' (cont. {chunk_idx + 1})'
-                safe_write(ws, f'A{current_row - 1}', label)
-                
-                # Iterar sobre las 10 columnas
-                for i in range(10):
-                    col_letter = col_letters[i]
-                    cell_piso = f'{col_letter}{current_row - 1}'
-                    cell_hogares = f'{col_letter}{current_row}'
-                    
-                    if i < len(chunk):
-                        # Escribir número de piso
-                        piso_num = (chunk_idx * 10) + i + 1
-                        safe_write(ws, cell_piso, piso_num)
-                        
-                        # Escribir hogares por piso
-                        try:
-                            val = int(chunk[i])
-                        except ValueError:
-                            val = 0
-                        safe_write(ws, cell_hogares, val)
-                    else:
-                        # Rellenar con N/A
-                        safe_write(ws, cell_piso, 'N/A')
-                        safe_write(ws, cell_hogares, 'N/A')
-                    
-                    # Aplicar estilos básicos si es una fila insertada para que no se vea desordenado
-                    if chunk_idx > 0:
-                        ws[cell_piso].border = thin_border
-                        ws[cell_piso].alignment = center_align
-                        ws[cell_piso].fill = header_fill
-                        
-                        ws[cell_hogares].border = thin_border
-                        ws[cell_hogares].alignment = center_align
-                        
-            current_row += 3
-            
-        # Incrustar imágenes físicamente
-        # Las fotos ahora deben considerar el desplazamiento de filas extra insertadas
-        photo_row = 80 + extra_rows_inserted
-        cells = [f'A{photo_row}', f'F{photo_row}']
+        # Incrustar imágenes físicamente (estáticamente en A80 y F80 como en el script original)
+        cells = ['A80', 'F80']
         for idx, photo_path in enumerate(photos):
             if idx >= len(cells): break
             cell = cells[idx]
@@ -229,7 +220,6 @@ def generate_excel(payload_json):
                     from PIL import Image as PILImage
                     final_path = photo_path
                     
-                    # Inspect actual image format (WebP files might be saved with .jpg extension)
                     with PILImage.open(photo_path) as im:
                         real_format = str(im.format).upper()
                         if real_format not in ['PNG', 'JPEG']:
@@ -238,8 +228,8 @@ def generate_excel(payload_json):
                             final_path = png_path
                     
                     img = Image(final_path)
-                    img.width = 320
-                    img.height = 340
+                    img.width = 330
+                    img.height = 260
                     ws.add_image(img, cell)
                 except Exception as e:
                     safe_write(ws, cell, f"Error cargando imagen: {str(e)}")
