@@ -493,7 +493,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                     Edificación e Inspección
                   </h4>
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} type="select" options={['ESTRENO', 'MODERNO', 'ANTIGUO', 'EN_CONSTRUCCION']} />
+                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} type="select" options={['ESTRENO', 'MODERNO', 'ANTIGUO']} />
                     <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" isReadOnly />
                     <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" isReadOnly />
 
