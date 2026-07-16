@@ -79,9 +79,10 @@ export class ReportProcessor extends WorkerHost {
     };
 
     const estadoConst = (opportunity.property?.estadoConstruccion || '').toUpperCase();
-    const estreno = (estadoConst === 'SÍ' || estadoConst === 'SI' || estadoConst === 'YES') ? 'Sí' : 'No';
+    const estreno = (estadoConst === 'SÍ' || estadoConst === 'SI' || estadoConst === 'YES' || estadoConst === 'ESTRENO' || estadoConst === 'EN_CONSTRUCCION') ? 'Sí' : 'No';
     const isEstreno = estreno === 'Sí';
     const fechaMontantes = isEstreno ? formatDate(opportunity.property?.terminoMontantes) : 'N/A';
+    const fechaMecha = isEstreno ? formatDate(opportunity.property?.terminoMecha) : 'N/A';
     const fechaEntrega = isEstreno ? formatDate(opportunity.property?.fechaEntrega) : 'N/A';
 
     // Matriz de hogares de todas las torres
@@ -159,6 +160,7 @@ export class ReportProcessor extends WorkerHost {
         coordenadas: coordenadasStr,
         estreno: estreno,
         fechaMontantes: fechaMontantes,
+        fechaMecha: fechaMecha,
         fechaEntrega: fechaEntrega,
         inmobiliaria: isEstreno ? (opportunity.property?.inmobiliaria || 'N/A') : 'N/A',
         responsable: opportunity.property?.nombreResponsable || 'N/A',

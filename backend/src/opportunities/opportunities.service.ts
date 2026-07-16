@@ -212,6 +212,10 @@ export class OpportunitiesService {
         const parsed = parseBackendDate(dto.fechaMontantes);
         if (parsed) predio.terminoMontantes = parsed;
       }
+      if (dto.fechaMecha && dto.fechaMecha !== '-') {
+        const parsed = parseBackendDate(dto.fechaMecha);
+        if (parsed) predio.terminoMecha = parsed;
+      }
 
       if (dto.horarioVisita && dto.horarioVisita !== '-')    predio.horarioVisita    = dto.horarioVisita;
       if (dto.urbanizacion && dto.urbanizacion !== '-')     predio.urbanizacionZona = dto.urbanizacion;

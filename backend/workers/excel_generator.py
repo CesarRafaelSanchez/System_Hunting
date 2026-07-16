@@ -82,7 +82,7 @@ def generate_excel(payload_json):
             # Si es Estreno, inyectamos las fechas correspondientes
             safe_write(ws, 'E23', str(property_data.get('fechaEntrega', '')))
             safe_write(ws, 'E25', str(property_data.get('fechaMontantes', '')))
-            safe_write(ws, 'E26', str(property_data.get('fechaMontantes', '')))
+            safe_write(ws, 'E26', str(property_data.get('fechaMecha', '')))
         elif 'ANTIGUO' in tipo_construccion:
             safe_write(ws, 'L22', 'X')
             safe_write(ws, 'E22', '')

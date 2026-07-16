@@ -174,7 +174,8 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     clientesInteresadosF3: hasForm3 ? (card.property?.clientesInteresados?.toString() || '-') : '-',
     inmobiliariaF3: card.property?.inmobiliaria || '-',
     fechaEntregaF3: hasForm3 ? formatDateString(card.property?.fechaEntrega) : '-',
-    fechaMontantesF3: hasForm3 ? formatDateString(card.property?.terminoMontantes) : '-'
+    fechaMontantesF3: hasForm3 ? formatDateString(card.property?.terminoMontantes) : '-',
+    fechaMechaF3: hasForm3 ? formatDateString(card.property?.terminoMecha) : '-'
   });
 
   const [towers, setTowers] = useState<any[]>(
@@ -206,6 +207,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
               newFormData.inmobiliariaF3 = payload.inmobiliaria || '-';
               newFormData.fechaEntregaF3 = payload.fechaEntrega ? formatDateString(payload.fechaEntrega) : '-';
               newFormData.fechaMontantesF3 = payload.fechaMontantes ? formatDateString(payload.fechaMontantes) : '-';
+              newFormData.fechaMechaF3 = payload.fechaMecha ? formatDateString(payload.fechaMecha) : '-';
             }
           });
 
@@ -513,7 +515,8 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                     <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                       <Field label="Inmobiliaria" name="inmobiliariaF3" value={formData.inmobiliariaF3} />
                       <Field label="Fecha Entrega" name="fechaEntregaF3" value={formData.fechaEntregaF3} type="date" />
-                      <Field label="Fecha Montantes/Mecha" name="fechaMontantesF3" value={formData.fechaMontantesF3} type="date" />
+                      <Field label="Fecha Término Montantes" name="fechaMontantesF3" value={formData.fechaMontantesF3} type="date" />
+                      <Field label="Fecha Término Mecha" name="fechaMechaF3" value={formData.fechaMechaF3} type="date" />
                     </div>
                   </div>
                 )}
@@ -732,6 +735,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                         payload.inmobiliaria = formData.inmobiliariaF3;
                         payload.fechaEntrega = formData.fechaEntregaF3;
                         payload.fechaMontantes = formData.fechaMontantesF3;
+                        payload.fechaMecha = formData.fechaMechaF3;
                         payload.towersData = towers;
                       } else {
                         payload.nombreProyecto = formData.nombreProyectoF2;

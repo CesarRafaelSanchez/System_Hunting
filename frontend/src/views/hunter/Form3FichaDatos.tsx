@@ -27,6 +27,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     tipoConstruccion: '',
     fechaEntrega: '',
     fechaMontantes: '',
+    fechaMecha: '',
     inmobiliaria: '',
     juntaDirectiva: '',
     cargoResponsable: '',
@@ -110,6 +111,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
             tipoConstruccion: (prop.estadoConstruccion === 'Sí' || prop.estadoConstruccion === 'ESTRENO') ? 'Estreno' : (prop.estadoConstruccion || ''),
             fechaEntrega: prop.fechaEntrega ? new Date(prop.fechaEntrega).toISOString().split('T')[0] : '',
             fechaMontantes: prop.terminoMontantes ? new Date(prop.terminoMontantes).toISOString().split('T')[0] : '',
+            fechaMecha: prop.terminoMecha ? new Date(prop.terminoMecha).toISOString().split('T')[0] : '',
             inmobiliaria: prop.inmobiliaria || '',
             juntaDirectiva: prop.juntaDirectiva || '',
             horarioVisita: prop.horarioVisita || '',
@@ -393,8 +395,12 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                   <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className={styles.input} required />
                 </div>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Fecha término de montantes y mecha *</label>
+                  <label className={styles.label}>Fecha término de montantes *</label>
                   <input type="date" name="fechaMontantes" value={formData.fechaMontantes} onChange={handleChange} className={styles.input} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Fecha término de mecha *</label>
+                  <input type="date" name="fechaMecha" value={formData.fechaMecha} onChange={handleChange} className={styles.input} required />
                 </div>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Inmobiliaria *</label>

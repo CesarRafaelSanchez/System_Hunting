@@ -47,6 +47,9 @@ export class Predio {
   @Column({ type: 'date', name: 'termino_montantes', nullable: true })
   terminoMontantes: Date;
 
+  @Column({ type: 'date', name: 'termino_mecha', nullable: true })
+  terminoMecha: Date;
+
   @Column({ type: 'date', name: 'termino_fibra_optica', nullable: true })
   terminoFibraOptica: Date;
 
