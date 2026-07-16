@@ -254,7 +254,7 @@ export class OpportunitiesService {
       if (dto.tipoEdificio && dto.tipoEdificio !== '-')  predio.clasificacionProyecto = dto.tipoEdificio; // Fallback
       if (dto.tipoProyecto && dto.tipoProyecto !== '-')  predio.tipoDesarrollo        = dto.tipoProyecto;
       
-      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno || dto.estadoConstruccion;
+      const estrenoVal = dto.estreno || dto.edificioEstreno || dto.esEstreno || dto.estadoConstruccion || dto.tipoConstruccion;
       if (predio.estadoConstruccion !== 'SI') { // 'SI' stands for ESTRENO in Form 2
          if (estrenoVal && estrenoVal !== '-') {
            predio.estadoConstruccion = estrenoVal;

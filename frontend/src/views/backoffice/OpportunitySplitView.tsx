@@ -151,9 +151,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     tipoProyectoF3: hasForm3 ? (card.property?.tipoDesarrollo || '-') : '-',
     origenF3: hasForm3 ? (card.property?.origenProspeccion === 'TERRENO' ? 'Propio' : (card.property?.origenProspeccion || '-')) : '-',
     clasificacionF3: hasForm3 ? (card.property?.clasificacionProyecto || '-') : '-',
-    tipoConstruccionF3: hasForm3 
-      ? (['SÍ', 'SI', 'Sí', 'Si', 'EN_CONSTRUCCION', 'ESTRENO'].includes(card.property?.estadoConstruccion) ? 'SÍ' : 'NO') 
-      : '-',
+    tipoConstruccionF3: hasForm3 ? (card.property?.estadoConstruccion || '-') : '-',
     juntaDirectivaF3: hasForm3 ? (card.property?.juntaDirectiva || '-') : '-',
     cargoResponsableF3: hasForm3 ? (card.property?.cargoResponsable || '-') : '-',
     nombreResponsableF3: hasForm3 ? (card.property?.nombreResponsable || '-') : '-',
@@ -493,7 +491,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                     Edificación e Inspección
                   </h4>
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-                    <Field label="Tipo Construcción" name="tipoProyectoF3" value={formData.tipoProyectoF3} isReadOnly />
+                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} type="select" options={['ESTRENO', 'MODERNO', 'ANTIGUO', 'EN_CONSTRUCCION']} />
                     <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" isReadOnly />
                     <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" isReadOnly />
 
@@ -506,7 +504,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                 </div>
 
                 {/* 4. Información de Estreno (Condicional) */}
-                {(formData.tipoProyectoF3 === 'Estreno' || formData.tipoProyectoF3 === 'ESTRENO') && (
+                {(formData.tipoConstruccionF3 === 'Estreno' || formData.tipoConstruccionF3 === 'ESTRENO' || formData.tipoConstruccionF3 === 'EN_CONSTRUCCION') && (
                   <div className="bg-blue-50/50 p-5 rounded-xl shadow-sm border border-blue-100">
                     <h4 className="font-bold text-blue-900 mb-4 pb-2 border-b border-blue-100 flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
@@ -708,18 +706,44 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                     try {
                       const { opportunitiesService } = await import('../../services/opportunities.service');
                       
-                      const payload = {
-                        nombreProyecto: formData.nombreProyectoF2,
-                        tipoVia: formData.tipoViaF2,
-                        nombreVia: formData.nombreViaF2,
-                        numeracionMunicipal: formData.numeracionViaF2,
-                        numeroHogares: formData.numeroHpsF2 ? parseInt(formData.numeroHpsF2) : undefined,
-                        estadoConstruccion: formData.estrenoF2,
-                        terminoMontantes: formData.fechaMontantesF2,
-                        fechaEntrega: formData.fechaEntregaF2,
-                        inmobiliaria: formData.inmobiliariaF2,
+                      const payload: any = {
                         companyId: formData.companyId,
                       };
+
+                      if (activeTab === 'form_3') {
+                        payload.nombreProyecto = formData.nombreProyectoF3;
+                        payload.tipoVia = formData.tipoViaF3;
+                        payload.nombreVia = formData.nombreViaF3;
+                        payload.numeracionMunicipal = formData.numeracionViaF3;
+                        payload.coordenadas = formData.coordenadasF3;
+                        payload.tipoConstruccion = formData.tipoConstruccionF3;
+                        payload.juntaDirectiva = formData.juntaDirectivaF3;
+                        payload.cargoResponsable = formData.cargoResponsableF3;
+                        payload.nombreResponsable = formData.nombreResponsableF3;
+                        payload.telefonoResponsable = formData.telefonoResponsableF3;
+                        payload.correoResponsable = formData.correoResponsableF3;
+                        payload.visitaInspeccion = formData.visitaInspeccionF3;
+                        payload.horarioVisita = formData.horarioVisitaF3;
+                        payload.departamento = formData.departamentoF3;
+                        payload.provincia = formData.provinciaF3;
+                        payload.urbanizacion = formData.urbanizacionF3;
+                        payload.codigoPostal = formData.codigoPostalF3;
+                        payload.clientesInteresados = formData.clientesInteresadosF3 ? parseInt(formData.clientesInteresadosF3, 10) : undefined;
+                        payload.inmobiliaria = formData.inmobiliariaF3;
+                        payload.fechaEntrega = formData.fechaEntregaF3;
+                        payload.fechaMontantes = formData.fechaMontantesF3;
+                        payload.towersData = towers;
+                      } else {
+                        payload.nombreProyecto = formData.nombreProyectoF2;
+                        payload.tipoVia = formData.tipoViaF2;
+                        payload.nombreVia = formData.nombreViaF2;
+                        payload.numeracionMunicipal = formData.numeracionViaF2;
+                        payload.numeroHogares = formData.numeroHpsF2 ? parseInt(formData.numeroHpsF2, 10) : undefined;
+                        payload.estadoConstruccion = formData.estrenoF2;
+                        payload.terminoMontantes = formData.fechaMontantesF2;
+                        payload.fechaEntrega = formData.fechaEntregaF2;
+                        payload.inmobiliaria = formData.inmobiliariaF2;
+                      }
 
                       await opportunitiesService.updateForms(card.id, payload);
                       toast.success('Datos actualizados correctamente');
