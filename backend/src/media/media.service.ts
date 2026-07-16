@@ -62,8 +62,12 @@ export class MediaService {
 
   async getAssetsByEntityId(entityId: string, companyId: string) {
     const repo = this.dataSource.getRepository(MediaAsset);
+    const whereClause: any = { entityId };
+    if (companyId) {
+      whereClause.companyId = companyId;
+    }
     const assets = await repo.find({
-      where: { entityId, companyId },
+      where: whereClause,
       order: { takenAt: 'DESC' }
     });
     // Return both url and fileUrl for frontend compatibility, rewriting old localhost:3000 URLs to local proxy paths

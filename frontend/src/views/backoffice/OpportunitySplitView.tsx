@@ -173,7 +173,10 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     coordenadasF3: getCoordinates(),
     totalTorresF3: card.property?.totalTorres?.toString() || '-',
     totalHogaresF3: hasForm3 ? (card.property?.totalHogares?.toString() || '-') : '-',
-    clientesInteresadosF3: hasForm3 ? (card.property?.clientesInteresados?.toString() || '-') : '-'
+    clientesInteresadosF3: hasForm3 ? (card.property?.clientesInteresados?.toString() || '-') : '-',
+    inmobiliariaF3: card.property?.inmobiliaria || '-',
+    fechaEntregaF3: hasForm3 ? formatDateString(card.property?.fechaEntrega) : '-',
+    fechaMontantesF3: hasForm3 ? formatDateString(card.property?.terminoMontantes) : '-'
   });
 
   const [towers, setTowers] = useState<any[]>(
@@ -202,6 +205,9 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
               newFormData.nombreResponsableF3 = payload.nombreResponsable || '-';
               newFormData.telefonoResponsableF3 = payload.telefonoResponsable || '-';
               newFormData.correoResponsableF3 = payload.correoResponsable || '-';
+              newFormData.inmobiliariaF3 = payload.inmobiliaria || '-';
+              newFormData.fechaEntregaF3 = payload.fechaEntrega ? formatDateString(payload.fechaEntrega) : '-';
+              newFormData.fechaMontantesF3 = payload.fechaMontantes ? formatDateString(payload.fechaMontantes) : '-';
             }
           });
 
@@ -442,56 +448,103 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
 
             {activeTab === 'form_3' && (
               <div className="space-y-6">
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                  <h4 className="font-bold text-gray-800 mb-4">Ficha Técnica (Form 3) {isEditing && <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded ml-2">Edición</span>}</h4>
+                
+                {/* 1. Canal y Asignación */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                  <h4 className="font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                    Canal y Asignación
+                  </h4>
                   <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                     <Field label="Nombre Canal" name="nombreCanalF3" value={formData.nombreCanalF3} />
                     <Field label="Ingreso" name="ingresoF3" value={formData.ingresoF3} type="select" options={['Propio', 'Referido']} />
-                    <Field label="Hunter" name="hunterF3" value={formData.hunterF3} isReadOnly />
-                    
+                    <Field label="Hunter / Gestor" name="hunterF3" value={formData.hunterF3} isReadOnly />
+                  </div>
+                </div>
+
+                {/* 2. Ubicación y Dirección */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                  <h4 className="font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    Ubicación y Dirección
+                  </h4>
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                     <Field label="Nombre Proyecto" name="nombreProyectoF3" value={formData.nombreProyectoF3} colSpan={2} isReadOnly />
-                    <Field label="Tipo Proyecto" name="tipoProyectoF3" value={formData.tipoProyectoF3} type="select" options={['Estreno', 'Moderno', 'Antiguo']} isReadOnly />
-                    
-                    <Field label="Fuente / Origen" name="origenF3" value={formData.origenF3} isReadOnly />
                     <Field label="Clasificación" name="clasificacionF3" value={formData.clasificacionF3} isReadOnly />
-                    <Field label="Tipo Construcción" name="tipoConstruccionF3" value={formData.tipoConstruccionF3} isReadOnly />
-                    
-                    <Field label="Junta Directiva" name="juntaDirectivaF3" value={formData.juntaDirectivaF3} type="select" options={['Sí', 'No']} />
-                    <Field label="Cargo Responsable" name="cargoResponsableF3" value={formData.cargoResponsableF3} />
-                    <Field label="Nombre Responsable" name="nombreResponsableF3" value={formData.nombreResponsableF3} />
-                    
-                    <Field label="Teléfono Resp." name="telefonoResponsableF3" value={formData.telefonoResponsableF3} />
-                    <Field label="Correo Resp." name="correoResponsableF3" value={formData.correoResponsableF3} colSpan={2} />
-                    
-                    <Field label="Fecha Inspección" name="visitaInspeccionF3" value={formData.visitaInspeccionF3} type="date" />
-                    <Field label="Horario Visita" name="horarioVisitaF3" value={formData.horarioVisitaF3} colSpan={2} />
-
-                    <Field label="Departamento" name="departamentoF3" value={formData.departamentoF3} />
-                    <Field label="Provincia" name="provinciaF3" value={formData.provinciaF3} />
-                    <Field label="Distrito" name="distritoF3" value={formData.distritoF3} isReadOnly />
-
-                    <Field label="Urbanización" name="urbanizacionF3" value={formData.urbanizacionF3} colSpan={2} />
-                    <Field label="Cod. Postal" name="codigoPostalF3" value={formData.codigoPostalF3} />
 
                     <Field label="Tipo Vía" name="tipoViaF3" value={formData.tipoViaF3} isReadOnly />
                     <Field label="Nombre Vía" name="nombreViaF3" value={formData.nombreViaF3} isReadOnly />
                     <Field label="Numeración" name="numeracionViaF3" value={formData.numeracionViaF3} isReadOnly />
 
-                    <Field label="Coordenadas" name="coordenadasF3" value={formData.coordenadasF3} colSpan={3} isReadOnly />
-                    
-                    <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" isReadOnly />
-                    <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" isReadOnly />
-                    <Field label="Nro Interesados" name="clientesInteresadosF3" value={formData.clientesInteresadosF3} type="number" />
+                    <Field label="Distrito" name="distritoF3" value={formData.distritoF3} isReadOnly />
+                    <Field label="Urbanización" name="urbanizacionF3" value={formData.urbanizacionF3} />
+                    <Field label="Cod. Postal" name="codigoPostalF3" value={formData.codigoPostalF3} />
+
+                    <Field label="Departamento" name="departamentoF3" value={formData.departamentoF3} />
+                    <Field label="Provincia" name="provinciaF3" value={formData.provinciaF3} />
+                    <Field label="Coordenadas GPS" name="coordenadasF3" value={formData.coordenadasF3} isReadOnly />
                   </div>
                 </div>
 
-                <div className="bg-gray-50 p-5 rounded-lg shadow-inner border border-gray-200">
+                {/* 3. Edificación e Inspección */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                  <h4 className="font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                    Edificación e Inspección
+                  </h4>
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                    <Field label="Tipo Construcción" name="tipoProyectoF3" value={formData.tipoProyectoF3} isReadOnly />
+                    <Field label="Total Torres" name="totalTorresF3" value={formData.totalTorresF3} type="number" isReadOnly />
+                    <Field label="Total Hogares" name="totalHogaresF3" value={formData.totalHogaresF3} type="number" isReadOnly />
+
+                    <Field label="Fecha Inspección" name="visitaInspeccionF3" value={formData.visitaInspeccionF3} type="date" />
+                    <Field label="Horario Visita" name="horarioVisitaF3" value={formData.horarioVisitaF3} />
+                    <Field label="Clientes Interesados" name="clientesInteresadosF3" value={formData.clientesInteresadosF3} type="number" />
+                    
+                    <Field label="Junta Directiva" name="juntaDirectivaF3" value={formData.juntaDirectivaF3} type="select" options={['Sí', 'No']} />
+                  </div>
+                </div>
+
+                {/* 4. Información de Estreno (Condicional) */}
+                {(formData.tipoProyectoF3 === 'Estreno' || formData.tipoProyectoF3 === 'ESTRENO') && (
+                  <div className="bg-blue-50/50 p-5 rounded-xl shadow-sm border border-blue-100">
+                    <h4 className="font-bold text-blue-900 mb-4 pb-2 border-b border-blue-100 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                      Información de Estreno
+                    </h4>
+                    <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                      <Field label="Inmobiliaria" name="inmobiliariaF3" value={formData.inmobiliariaF3} />
+                      <Field label="Fecha Entrega" name="fechaEntregaF3" value={formData.fechaEntregaF3} type="date" />
+                      <Field label="Fecha Montantes/Mecha" name="fechaMontantesF3" value={formData.fechaMontantesF3} type="date" />
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Responsable del Predio */}
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                  <h4 className="font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    Responsable del Predio
+                  </h4>
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                    <Field label="Nombre Responsable" name="nombreResponsableF3" value={formData.nombreResponsableF3} />
+                    <Field label="Cargo Responsable" name="cargoResponsableF3" value={formData.cargoResponsableF3} />
+                    <Field label="Teléfono Resp." name="telefonoResponsableF3" value={formData.telefonoResponsableF3} />
+                    <Field label="Correo Resp." name="correoResponsableF3" value={formData.correoResponsableF3} colSpan={3} />
+                  </div>
+                </div>
+
+                {/* 6. Matriz de Torres Dinámica */}
+                <div className="bg-gray-50 p-5 rounded-xl shadow-inner border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
-                    <h5 className="font-bold text-gray-800">Matriz Dinámica de Torres</h5>
+                    <h5 className="font-bold text-gray-800 flex items-center gap-2">
+                      <Building className="w-5 h-5 text-gray-500" />
+                      Matriz Dinámica de Torres
+                    </h5>
                     {isEditing && <button onClick={addTower} className="text-blue-600 font-bold hover:underline text-sm">+ Agregar Torre</button>}
                   </div>
                   
-                  <div className="flex flex-col gap-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {towers.map((tower, idx) => {
                       const numPisos = parseInt(tower.pisos_torre, 10) || 0;
                       let hasError = false;
@@ -509,61 +562,86 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                         }
                       }
 
+                      // Parse distribution for preview when not in edit mode
+                      const distribution = tower.hogares_por_piso
+                        ? tower.hogares_por_piso.split(',').map((val: string) => parseInt(val.trim(), 10) || 0)
+                        : [];
+
                       return (
-                        <div key={idx} className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 relative shadow-sm">
+                        <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 relative shadow-sm hover:shadow-md transition-shadow">
                           {isEditing && towers.length > 1 && (
-                            <button type="button" onClick={() => removeTower(idx)} className="absolute top-4 right-4 text-red-500 hover:text-red-700 text-sm font-bold">✖</button>
+                            <button type="button" onClick={() => removeTower(idx)} className="absolute top-4 right-4 text-red-400 hover:text-red-600 text-sm">✖</button>
                           )}
-                          <h4 className="font-bold text-gray-800 mb-4 text-md">Configuración {tower.nombre_torre || `Torre ${idx + 1}`}</h4>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="col-span-1 md:col-span-2">
-                              <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">NOMBRE DE LA TORRE</label>
-                              {isEditing ? (
-                                <input 
-                                  value={tower.nombre_torre} 
-                                  onChange={(e) => handleTowerChange(idx, 'nombre_torre', e.target.value)} 
-                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ghl-blue" 
-                                  placeholder="Ej: Torre 1"
-                                />
-                              ) : (
-                                <p className="text-sm font-medium">{tower.nombre_torre}</p>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">PISOS</label>
-                              {isEditing ? (
-                                <input 
-                                  type="number" 
-                                  value={tower.pisos_torre} 
-                                  onChange={(e) => handleTowerChange(idx, 'pisos_torre', e.target.value)} 
-                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ghl-blue" 
-                                  min="1"
-                                  placeholder="Ej: 5"
-                                />
-                              ) : (
-                                <p className="text-sm font-medium">{tower.pisos_torre}</p>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">HOGARES POR PISO</label>
-                              {isEditing ? (
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center">
+                              T{idx + 1}
+                            </span>
+                            <h4 className="font-bold text-gray-800 text-sm">
+                              {tower.nombre_torre || `Torre ${idx + 1}`}
+                            </h4>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {isEditing ? (
+                              <div className="space-y-3">
                                 <div>
+                                  <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Nombre de la Torre</label>
                                   <input 
-                                    type="text" 
-                                    value={tower.hogares_por_piso} 
-                                    onChange={(e) => handleTowerChange(idx, 'hogares_por_piso', e.target.value)} 
-                                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 ${hasError ? 'border-red-500 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-ghl-blue'}`} 
-                                    placeholder="Ej: 4,4,4,2"
+                                    value={tower.nombre_torre} 
+                                    onChange={(e) => handleTowerChange(idx, 'nombre_torre', e.target.value)} 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ghl-blue" 
+                                    placeholder="Ej: Torre 1"
                                   />
-                                  {hasError && <p className="text-red-500 text-xs mt-1 font-semibold">{errorMsg}</p>}
                                 </div>
-                              ) : (
-                                <p className="text-sm font-medium">{tower.hogares_por_piso}</p>
-                              )}
-                            </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Pisos</label>
+                                    <input 
+                                      type="number" 
+                                      value={tower.pisos_torre} 
+                                      onChange={(e) => handleTowerChange(idx, 'pisos_torre', e.target.value)} 
+                                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ghl-blue" 
+                                      min="1"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Hogares/Piso (Comas)</label>
+                                    <input 
+                                      type="text" 
+                                      value={tower.hogares_por_piso} 
+                                      onChange={(e) => handleTowerChange(idx, 'hogares_por_piso', e.target.value)} 
+                                      className={`w-full border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 ${hasError ? 'border-red-500 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-ghl-blue'}`} 
+                                      placeholder="Ej: 4,4,4"
+                                    />
+                                  </div>
+                                </div>
+                                {hasError && <p className="text-red-500 text-[10px] mt-1 font-semibold">{errorMsg}</p>}
+                              </div>
+                            ) : (
+                              <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+                                <div className="flex justify-between text-xs text-gray-500">
+                                  <span>Total Pisos:</span>
+                                  <span className="font-bold text-gray-700">{numPisos}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500">
+                                  <span>Total Hogares:</span>
+                                  <span className="font-bold text-gray-700">
+                                    {distribution.reduce((acc: number, curr: number) => acc + curr, 0)} HP
+                                  </span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                  <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Distribución por Piso</label>
+                                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pt-1">
+                                    {distribution.map((h: number, pIdx: number) => (
+                                      <span key={pIdx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                        P{pIdx + 1}: {h} HP
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
