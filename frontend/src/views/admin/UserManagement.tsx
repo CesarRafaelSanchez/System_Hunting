@@ -16,6 +16,7 @@ interface User {
   role: string;
   isActive: boolean;
   company?: Company;
+  phone?: string;
 }
 
 export const UserManagement: React.FC = () => {
@@ -30,6 +31,7 @@ export const UserManagement: React.FC = () => {
   // Form Fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('HUNTER');
   const [companyId, setCompanyId] = useState('');
@@ -70,6 +72,7 @@ export const UserManagement: React.FC = () => {
     setEditingUser(null);
     setFullName('');
     setEmail('');
+    setPhone('');
     setPassword('');
     setRole('HUNTER');
     if (companies.length > 0) {
@@ -84,6 +87,7 @@ export const UserManagement: React.FC = () => {
     setEditingUser(user);
     setFullName(user.fullName);
     setEmail(user.email);
+    setPhone(user.phone || '');
     setPassword(''); // Opcional al editar
     setRole(user.role);
     setCompanyId(user.company?.id || '');
@@ -123,6 +127,7 @@ export const UserManagement: React.FC = () => {
           body: JSON.stringify({
             fullName,
             email,
+            phone,
             role,
             companyId,
             ...(password ? { password } : {})
@@ -137,6 +142,7 @@ export const UserManagement: React.FC = () => {
           body: JSON.stringify({
             fullName,
             email,
+            phone,
             password,
             role,
             companyId
@@ -193,6 +199,7 @@ export const UserManagement: React.FC = () => {
                 <tr>
                   <th className="px-6 py-4 font-semibold">Nombre Completo</th>
                   <th className="px-6 py-4 font-semibold">Correo Electrónico</th>
+                  <th className="px-6 py-4 font-semibold">Teléfono</th>
                   <th className="px-6 py-4 font-semibold">Empresa</th>
                   <th className="px-6 py-4 font-semibold">Rol</th>
                   <th className="px-6 py-4 font-semibold text-center">Acciones</th>
@@ -206,6 +213,9 @@ export const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {user.email}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 font-mono">
+                      {user.phone || <span className="text-gray-400 italic">No registrado</span>}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {user.company?.name || <span className="text-gray-400 italic">Sin empresa</span>}
@@ -292,6 +302,19 @@ export const UserManagement: React.FC = () => {
                   placeholder="correo@ejemplo.com"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                  Número de Teléfono / WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Ej. +51987654321"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all"
                 />
               </div>
 
