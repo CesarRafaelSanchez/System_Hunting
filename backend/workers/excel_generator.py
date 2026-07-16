@@ -82,6 +82,7 @@ def generate_excel(payload_json):
             # Si es Estreno, inyectamos las fechas correspondientes
             safe_write(ws, 'E23', str(property_data.get('fechaEntrega', '')))
             safe_write(ws, 'E25', str(property_data.get('fechaMontantes', '')))
+            safe_write(ws, 'E26', str(property_data.get('fechaMontantes', '')))
         elif 'ANTIGUO' in tipo_construccion:
             safe_write(ws, 'L22', 'X')
             safe_write(ws, 'E22', '')
@@ -120,8 +121,10 @@ def generate_excel(payload_json):
             safe_write(ws, 'L39', '')
 
         # 5. DIRECCION Y COORDENADAS
-        safe_write(ws, 'C43', str(property_data.get('departamento', '')).upper()) # DEPARTAMENTO
-        safe_write(ws, 'I43', str(property_data.get('provincia', '')).upper()) # PROVINCIA
+        dept_val = str(property_data.get('departamento', '')).strip()
+        prov_val = str(property_data.get('provincia', '')).strip()
+        safe_write(ws, 'C43', str(dept_val if dept_val else 'LIMA').upper()) # DEPARTAMENTO
+        safe_write(ws, 'I43', str(prov_val if prov_val else 'LIMA').upper()) # PROVINCIA
         safe_write(ws, 'C44', str(property_data.get('distrito', '')).upper()) # DISTRITO
         safe_write(ws, 'I44', str(property_data.get('urbanizacion', '')).upper()) # URBANIZACION
         safe_write(ws, 'C45', str(property_data.get('codigoPostal', ''))) # CODIGO POSTAL
@@ -205,10 +208,9 @@ def generate_excel(payload_json):
         is_referral = data.get('isReferral', False)
         if is_referral:
             safe_write(ws, 'C75', str(data.get('referredHunterName', '')).upper()) # NOMBRE DEL HUNTER
-            safe_write(ws, 'I75', 'N/A') # CELULAR DEL HUNTER
         else:
             safe_write(ws, 'C75', str(data.get('currentOwnerName', '')).upper()) # NOMBRE DEL HUNTER
-            safe_write(ws, 'I75', str(data.get('currentOwnerPhone', ''))) # CELULAR DEL HUNTER
+        safe_write(ws, 'I75', str(data.get('currentOwnerPhone', ''))) # CELULAR DEL HUNTER
 
         # Incrustar imágenes físicamente (estáticamente en A80 y F80 como en el script original)
         cells = ['A80', 'F80']
