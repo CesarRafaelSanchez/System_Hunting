@@ -52,8 +52,11 @@ services:
       - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
       - INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - BOT_API_KEY=${BOT_API_KEY}
     volumes:
       - ./credentials:/app/credentials:ro
+      - ./backend/uploads:/app/uploads
     ports:
       - "3000:3000"
     depends_on:

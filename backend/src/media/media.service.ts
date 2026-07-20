@@ -70,10 +70,15 @@ export class MediaService {
       where: whereClause,
       order: { takenAt: 'DESC' }
     });
-    // Return both url and fileUrl for frontend compatibility, rewriting old localhost:3000 URLs to local proxy paths
+    // Return both url and fileUrl for frontend compatibility
+    // Rewriting old absolute URLs if a BACKEND_URL is provided, or just returning as is
     return assets.map(a => {
       let url = a.fileUrl;
-      if (url && url.startsWith('http://localhost:3000/uploads/')) {
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+      if (url && url.startsWith(`${backendUrl}/uploads/`)) {
+        url = url.replace(`${backendUrl}/uploads/`, '/api/uploads/');
+      } else if (url && url.startsWith('http://localhost:3000/uploads/')) {
+        // Fallback catch for legacy hardcoded data
         url = url.replace('http://localhost:3000/uploads/', '/api/uploads/');
       }
       return { ...a, fileUrl: url, url };

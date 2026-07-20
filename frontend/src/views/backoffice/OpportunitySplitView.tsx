@@ -192,26 +192,26 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
         const { fetchApi } = await import('../../services/api.client');
         const submissions = await fetchApi<any[]>(`/opportunities/${card.id}/submissions`);
         if (submissions && submissions.length > 0) {
-          const newFormData = { ...formData };
-
-          submissions.forEach((sub: any) => {
-            const payload = sub.raw_payload_json;
-            if (sub.form_code === 'FORM_ASIGNACION') {
-              newFormData.inmobiliariaF2 = payload.inmobiliaria || '-';
-            }
-            else if (sub.form_code === 'FORM_FICHA_DATOS') {
-              newFormData.cargoResponsableF3 = payload.cargoResponsable || '-';
-              newFormData.nombreResponsableF3 = payload.nombreResponsable || '-';
-              newFormData.telefonoResponsableF3 = payload.telefonoResponsable || '-';
-              newFormData.correoResponsableF3 = payload.correoResponsable || '-';
-              newFormData.inmobiliariaF3 = payload.inmobiliaria || '-';
-              newFormData.fechaEntregaF3 = payload.fechaEntrega ? formatDateString(payload.fechaEntrega) : '-';
-              newFormData.fechaMontantesF3 = payload.fechaMontantes ? formatDateString(payload.fechaMontantes) : '-';
-              newFormData.fechaMechaF3 = payload.fechaMecha ? formatDateString(payload.fechaMecha) : '-';
-            }
+          setFormData((prev: any) => {
+            const newFormData = { ...prev };
+            submissions.forEach((sub: any) => {
+              const payload = sub.raw_payload_json;
+              if (sub.form_code === 'FORM_ASIGNACION') {
+                newFormData.inmobiliariaF2 = payload.inmobiliaria || '-';
+              }
+              else if (sub.form_code === 'FORM_FICHA_DATOS') {
+                newFormData.cargoResponsableF3 = payload.cargoResponsable || '-';
+                newFormData.nombreResponsableF3 = payload.nombreResponsable || '-';
+                newFormData.telefonoResponsableF3 = payload.telefonoResponsable || '-';
+                newFormData.correoResponsableF3 = payload.correoResponsable || '-';
+                newFormData.inmobiliariaF3 = payload.inmobiliaria || '-';
+                newFormData.fechaEntregaF3 = payload.fechaEntrega ? formatDateString(payload.fechaEntrega) : '-';
+                newFormData.fechaMontantesF3 = payload.fechaMontantes ? formatDateString(payload.fechaMontantes) : '-';
+                newFormData.fechaMechaF3 = payload.fechaMecha ? formatDateString(payload.fechaMecha) : '-';
+              }
+            });
+            return newFormData;
           });
-
-          setFormData(newFormData);
         }
       } catch (e) {
         console.error('Error loading submissions', e);
@@ -414,7 +414,6 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                   <Field label="Distrito" name="distritoF2" value={formData.distritoF2} />
                   <Field label="Número de HPs" name="numeroHpsF2" value={formData.numeroHpsF2} type="number" />
                   <Field label="Dirección Exacta" name="direccionExactaF1" value={formData.direccionExactaF1} colSpan={2} />
-                  <Field label="Coordenadas" name="coordenadasF2" value={formData.coordenadasF2} colSpan={2} />
                 </div>
               </div>
             )}
@@ -729,7 +728,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                         payload.horarioVisita = formData.horarioVisitaF3;
                         payload.departamento = formData.departamentoF3;
                         payload.provincia = formData.provinciaF3;
-                        payload.urbanizacion = formData.urbanizacionF3;
+                        payload.urbanizacionZona = formData.urbanizacionF3;
                         payload.codigoPostal = formData.codigoPostalF3;
                         payload.clientesInteresados = formData.clientesInteresadosF3 ? parseInt(formData.clientesInteresadosF3, 10) : undefined;
                         payload.inmobiliaria = formData.inmobiliariaF3;

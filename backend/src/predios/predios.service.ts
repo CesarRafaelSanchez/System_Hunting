@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { CreatePredioDto } from './dto/create-predio.dto';
+import { CreateRegistroInicialDto } from './dto/create-registro-inicial.dto';
 import { UpdatePredioDto } from './dto/update-predio.dto';
 import { CreatePropertyContactDto } from './dto/create-property-contact.dto';
 import { Predio } from '../database/entities/predio.entity';
 import { Torre } from '../database/entities/torre.entity';
 import { Piso } from '../database/entities/piso.entity';
+import { FormSubmission } from '../database/entities/form-submission.entity';
 import { Contact } from '../database/entities/contact.entity';
 import { PropertyContact } from '../database/entities/property-contact.entity';
 import { Opportunity } from '../database/entities/opportunity.entity';
@@ -39,7 +40,7 @@ export class PrediosService {
     return Array(totalPisos).fill(0);
   }
 
-  async createPredio(user: any, dto: CreatePredioDto, manager: EntityManager) {
+  async createPredio(user: any, dto: CreateRegistroInicialDto, manager: EntityManager) {
     console.log('[createPredio] Received DTO in backend:', JSON.stringify(dto));
     // ── 1. Resolver el UUID del distrito desde su nombre ──────────────────────
     const distritoNombre = dto.distrito?.trim();
@@ -90,7 +91,7 @@ export class PrediosService {
 
     const predio = manager.create(Predio, {
       companyId: assignedCompanyId,
-      nombreProyecto: dto.nombreEdificio,          // nombreEdificio → nombreProyecto
+      nombreProyecto: dto.nombreProyecto,
       direccionExacta: direccionClean,
       resultadoVisita: dto.resultadoVisita || '-',
       detalleVisita: dto.detalle || '-',
@@ -100,6 +101,8 @@ export class PrediosService {
       estadoConstruccion: dto.estadoConstruccion || 'EN_CONSTRUCCION',
       juntaDirectiva: dto.juntaDirectiva || 'NO',
       distritoId: distrito.id,
+      departamento: dto.departamento || 'Lima',
+      provincia: dto.provincia || 'Lima',
       tipoVia: '-',
       nombreVia: '-',
       numeracionMunicipal: '-',
@@ -165,8 +168,13 @@ export class PrediosService {
     });
     const savedOpportunity = await manager.save(opportunity);
 
-    // El guardado del formulario en form_submissions ha sido removido porque
-    // la tabla no existe en el MVP y causa que la transacción de Postgres se aborte.
+    const submission = manager.create(FormSubmission, {
+      opportunityId: opportunity.id,
+      formCode: 'FORM_REGISTRO_INICIAL',
+      submittedByUserId: user.id,
+      rawPayloadJson: dto,
+    });
+    await manager.save(submission);
 
     return savedPredio;
   }

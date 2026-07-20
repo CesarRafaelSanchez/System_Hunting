@@ -17,9 +17,11 @@ export const Form1Registro: React.FC = () => {
   
   const [formData, setFormData] = useState({
     ejecutivo: user?.id || '',
-    nombreEdificio: '',
+    nombreProyecto: '',
     direccion: '',
     distrito: '',
+    departamento: 'Lima',
+    provincia: 'Lima',
     numeroHPs: '',
     resultadoVisita: '',
     detalle: ''
@@ -58,14 +60,14 @@ export const Form1Registro: React.FC = () => {
       toast.success('Predio registrado correctamente');
       clearDraft('form1');
       setStep(1);
-      setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '' });
+      setFormData({ ejecutivo: user?.id || '', nombreProyecto: '', direccion: '', distrito: '', departamento: 'Lima', provincia: 'Lima', numeroHPs: '', resultadoVisita: '', detalle: '' });
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError') || !navigator.onLine) {
         await addToSyncQueue('/predios', 'POST', formData);
         toast.warning('Sin conexión. Los datos se guardaron localmente y se enviarán automáticamente al recuperar la señal.');
         clearDraft('form1');
         setStep(1);
-        setFormData({ ejecutivo: user?.id || '', nombreEdificio: '', direccion: '', distrito: '', numeroHPs: '', resultadoVisita: '', detalle: '' });
+        setFormData({ ejecutivo: user?.id || '', nombreProyecto: '', direccion: '', distrito: '', departamento: 'Lima', provincia: 'Lima', numeroHPs: '', resultadoVisita: '', detalle: '' });
       } else {
         toast.error('Error al registrar predio: ' + error.message);
       }
@@ -109,7 +111,7 @@ export const Form1Registro: React.FC = () => {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre del edificio *</label>
-              <input name="nombreEdificio" value={formData.nombreEdificio} onChange={handleChange} className={styles.input} required />
+              <input name="nombreProyecto" value={formData.nombreProyecto} onChange={handleChange} className={styles.input} required />
             </div>
           </div>
         )}

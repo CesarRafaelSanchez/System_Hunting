@@ -16,25 +16,25 @@ export const Sidebar: React.FC = () => {
       case 'HUNTER':
         return [
           { name: 'Dashboard', path: '/hunter', icon: BarChart3 },
-          { name: 'Pipeline', path: '/hunter/pipeline', icon: LayoutDashboard },
+          { name: 'Oportunidades', path: '/hunter/oportunidades', icon: LayoutDashboard },
           { name: 'Asistencia', path: '/hunter/asistencia', icon: Clock },
-          { name: 'Registro de Predio', path: '/hunter/registro', icon: ClipboardList },
-          { name: 'Asignación de Predio', path: '/hunter/asignacion', icon: ClipboardList },
-          { name: 'Ficha de Datos', path: '/hunter/ficha', icon: ClipboardList },
+          { name: 'Registro de Predio', path: '/hunter/oportunidades/nueva', icon: ClipboardList },
+          { name: 'Asignación de Predio', path: '/hunter/oportunidades/asignacion', icon: ClipboardList },
+          { name: 'Ficha de Datos', path: '/hunter/oportunidades/ficha-tecnica', icon: ClipboardList },
         ];
       case 'BACKOFFICE':
         return [
           { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-          { name: 'Kanban', path: '/backoffice', icon: LayoutDashboard },
-          { name: 'Validación Expedientes', path: '/backoffice/validacion', icon: ClipboardList },
+          { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
+          { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
           { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
           { name: 'Historial', path: '/backoffice/historial', icon: History },
         ];
       case 'ADMIN':
         return [
           { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-          { name: 'Kanban', path: '/backoffice', icon: LayoutDashboard },
-          { name: 'Validación Expedientes', path: '/backoffice/validacion', icon: ClipboardList },
+          { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
+          { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
           { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
           { name: 'Empresas', path: '/admin/empresas', icon: Building2 },
           { name: 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },

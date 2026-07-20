@@ -22,4 +22,9 @@ export class CreateUserDto {
   @IsUUID()
   @IsNotEmpty()
   companyId: string;
+
+  @IsString()
+  @IsOptional()
+  @Length(6, 30)
+  phone?: string;
 }

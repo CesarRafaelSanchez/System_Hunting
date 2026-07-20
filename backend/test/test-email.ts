@@ -1,4 +1,4 @@
-import { EmailService } from './src/dispatch/email.service';
+import { EmailService } from '../src/dispatch/email.service';
 
 async function test() {
   console.log('Testing EmailService directly');

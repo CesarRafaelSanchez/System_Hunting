@@ -22,12 +22,28 @@ export const DashboardHunter: React.FC = () => {
       try {
         const response = await opportunitiesService.getAll();
         const data = (response as any).data || response;
-        // Simular filtrado por hunter id si aplica.
-        // Simulando carga de datos.
         const misOportunidades = Array.isArray(data) ? data : [];
+
+        // Filtrado por fecha
+        const now = new Date();
+        const filteredByDate = misOportunidades.filter((o: any) => {
+          if (!o.createdAt) return true;
+          const oppDate = new Date(o.createdAt);
+          if (dateFilter === 'today') {
+            return oppDate.toDateString() === now.toDateString();
+          } else if (dateFilter === 'week') {
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return oppDate >= oneWeekAgo;
+          } else if (dateFilter === 'month') {
+            return oppDate.getMonth() === now.getMonth() && oppDate.getFullYear() === now.getFullYear();
+          }
+          return true;
+        });
+
         setMetrics({
-          predios: misOportunidades.length,
-          asignaciones: misOportunidades.filter((o: any) => o.etapa >= 2).length, // asumiendo etapa > 2 significa asignación
+          predios: filteredByDate.length,
+          // 'stage' viene del backend (position - 1). Asumimos que >= 4 (posición 5) es asignación completada o en proceso
+          asignaciones: filteredByDate.filter((o: any) => o.stage >= 4).length,
           horas: dateFilter === 'today' ? 4 : dateFilter === 'week' ? 24 : 96,
         });
       } catch (error) {
@@ -37,6 +53,9 @@ export const DashboardHunter: React.FC = () => {
       }
     };
     fetchMetrics();
+    // Establecer un polling cada 30 segundos para "tiempo real" básico
+    const interval = setInterval(fetchMetrics, 30000);
+    return () => clearInterval(interval);
   }, [dateFilter, user?.id]);
 
   return (

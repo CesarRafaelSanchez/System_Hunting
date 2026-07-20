@@ -119,14 +119,18 @@ export const RegistrarPredio: React.FC = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-1.5 text-gray-600">
                           <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="truncate max-w-[200px]">{p.property?.nombreVia || p.subtitle || '-'}</span>
+                          <span className="truncate max-w-[200px]">
+                            {p.property?.direccionExacta && p.property.direccionExacta !== '-' 
+                              ? p.property.direccionExacta 
+                              : (p.property?.nombreVia && p.property.nombreVia !== '-' ? p.property.nombreVia : (p.subtitle && !p.subtitle.startsWith('Etapa') ? p.subtitle : '-'))}
+                          </span>
                         </div>
                       </td>
                       <td className="p-4 text-gray-600 uppercase text-xs">{p.property?.distrito || '-'}</td>
-                      <td className="p-4 text-center font-medium text-gray-800">{p.property?.numeroHogares || 0}</td>
+                      <td className="p-4 text-center font-medium text-gray-800">{p.property?.totalHogares || 0}</td>
                       <td className="p-4">
-                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase truncate max-w-[150px] inline-block">
-                          Etapa {p.stage !== undefined ? p.stage : 0}
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase truncate max-w-[150px] inline-block" title={p.currentStage?.name || ''}>
+                          {p.currentStage?.name || `Etapa ${p.stage !== undefined ? p.stage + 1 : 1}`}
                         </span>
                       </td>
                     </tr>

@@ -164,7 +164,7 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
     };
 
     fetchOpportunityData();
-  }, [getDraft, opportunityId]);
+  }, [getDraft, opportunityId, user?.fullName, user?.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newFormData = { ...formData, [e.target.name]: e.target.value };
@@ -568,7 +568,27 @@ export const Form3FichaDatos: React.FC<{ opportunityId?: string, onComplete?: ()
                       </div>
                       
                       <div className="col-span-1 md:col-span-2">
-                        <label className="block text-[10px] text-gray-400 uppercase font-bold mb-2">HOGARES POR PISO</label>
+                        <div className="flex justify-between items-end mb-2">
+                          <label className="block text-[10px] text-gray-400 uppercase font-bold">HOGARES POR PISO</label>
+                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-bold text-gray-500">Rellenar todos:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Ej: 4"
+                              className="w-16 border border-gray-300 rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) {
+                                  const newTowers = [...towers];
+                                  newTowers[idx].hogares_por_piso = newTowers[idx].hogares_por_piso.map(() => val);
+                                  setTowers(newTowers);
+                                  saveDraft(`form3-${opportunityId}`, { formData, towers: newTowers });
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                           {tower.hogares_por_piso.map((hp, floorIdx) => (
                             <div key={floorIdx} className="flex flex-col items-center p-2 border rounded-md bg-gray-50">

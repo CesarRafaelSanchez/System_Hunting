@@ -612,9 +612,9 @@ export const KanbanBoard: React.FC = () => {
 
   const handleActionClick = (type: string, id: string) => {
     if (type === 'asignacion') {
-      navigate('/hunter/asignacion', { state: { targetId: id } });
+      navigate('/hunter/oportunidades/asignacion', { state: { targetId: id } });
     } else if (type === 'ficha') {
-      navigate('/hunter/ficha', { state: { targetId: id } });
+      navigate('/hunter/oportunidades/ficha-tecnica', { state: { targetId: id } });
     }
   };
 

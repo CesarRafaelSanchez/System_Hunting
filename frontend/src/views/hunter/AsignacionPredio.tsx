@@ -120,15 +120,17 @@ export const AsignacionPredio: React.FC = () => {
                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                   <th className="p-4 border-b border-gray-200 font-semibold rounded-tl-lg">Proyecto / Edificio</th>
                   <th className="p-4 border-b border-gray-200 font-semibold">Dirección</th>
+                  <th className="p-4 border-b border-gray-200 font-semibold">Distrito</th>
                   <th className="p-4 border-b border-gray-200 font-semibold text-center">Hogares</th>
+                  <th className="p-4 border-b border-gray-200 font-semibold rounded-tr-lg">Etapa</th>
                   <th className="p-4 border-b border-gray-200 font-semibold text-center rounded-tr-lg">Acción</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {loading ? (
-                  <tr><td colSpan={4} className="p-8 text-center text-gray-400">Cargando...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">Cargando...</td></tr>
                 ) : filteredList.length === 0 ? (
-                  <tr><td colSpan={4} className="p-8 text-center text-gray-400">No hay predios en esta categoría.</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">No hay predios en esta categoría.</td></tr>
                 ) : (
                   filteredList.map((p, i) => (
                     <tr key={p.id || i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
@@ -146,10 +148,20 @@ export const AsignacionPredio: React.FC = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-1.5 text-gray-600">
                           <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="truncate max-w-[200px]">{p.property?.nombreVia || p.subtitle || '-'}</span>
+                          <span className="truncate max-w-[200px]">
+                            {p.property?.direccionExacta && p.property.direccionExacta !== '-' 
+                              ? p.property.direccionExacta 
+                              : (p.property?.nombreVia && p.property.nombreVia !== '-' ? p.property.nombreVia : (p.subtitle && !p.subtitle.startsWith('Etapa') ? p.subtitle : '-'))}
+                          </span>
                         </div>
                       </td>
-                      <td className="p-4 text-center font-medium text-gray-800">{p.property?.numeroHogares || 0}</td>
+                      <td className="p-4 text-gray-600 uppercase text-xs">{p.property?.distrito || '-'}</td>
+                      <td className="p-4 text-center font-medium text-gray-800">{p.property?.totalHogares || 0}</td>
+                      <td className="p-4">
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase truncate max-w-[150px] inline-block" title={p.currentStage?.name || ''}>
+                          {p.currentStage?.name || `Etapa ${p.stage !== undefined ? p.stage + 1 : 1}`}
+                        </span>
+                      </td>
                       <td className="p-4 text-center">
                         {activeTab === 'pending' ? (
                           <button 

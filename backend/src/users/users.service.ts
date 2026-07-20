@@ -62,6 +62,7 @@ export class UsersService implements OnApplicationBootstrap {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -91,6 +92,7 @@ export class UsersService implements OnApplicationBootstrap {
     const user = this.userRepository.create({
       fullName: dto.fullName,
       email: dto.email,
+      phone: dto.phone,
       passwordHash: hashedPassword,
       role: dto.role,
       companyId: dto.companyId,
@@ -111,6 +113,9 @@ export class UsersService implements OnApplicationBootstrap {
 
     user.fullName = dto.fullName;
     user.email = dto.email;
+    if (dto.phone !== undefined) {
+      user.phone = dto.phone;
+    }
     user.role = dto.role;
     user.companyId = dto.companyId;
 

@@ -1,12 +1,16 @@
 import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
 
-export class CreatePredioDto {
+export class CreateRegistroInicialDto {
   // ── Campos del formulario de Registro de Predio (Génesis) ──────────────────
   // Estos son los campos que envía el formulario frontend del Hunter.
 
   @IsString()
+  @IsOptional()
+  ejecutivo?: string; // Hunter que registra el predio
+
+  @IsString()
   @IsNotEmpty()
-  nombreEdificio: string; // Nombre del edificio / proyecto
+  nombreProyecto: string; // Nombre del edificio / proyecto
 
   @IsString()
   @IsNotEmpty()
@@ -15,6 +19,14 @@ export class CreatePredioDto {
   @IsString()
   @IsNotEmpty()
   distrito: string; // Nombre del distrito (el backend resuelve el UUID)
+
+  @IsString()
+  @IsOptional()
+  departamento?: string; // Departamento (e.g. Lima)
+
+  @IsString()
+  @IsOptional()
+  provincia?: string; // Provincia (e.g. Lima)
 
   @IsString()
   @IsOptional()

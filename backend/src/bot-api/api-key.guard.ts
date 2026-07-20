@@ -7,7 +7,7 @@ export class ApiKeyGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const apiKey = request.headers['x-api-key'] || request.query['api_key'];
 
-    const validKey = process.env.BOT_API_KEY || 'FUTURA_BOT_SECRET_2026';
+    const validKey = process.env.BOT_API_KEY;
 
     if (apiKey === validKey) {
       return true;

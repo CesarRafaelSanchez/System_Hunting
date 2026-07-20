@@ -96,7 +96,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
               const stageName = STAGES[c.stage] || 'Desconocido';
               const ownerName = p.ejecutivo || 'Hunter';
               
-              const direccionCompleta = [p.tipoVia, p.nombreVia, p.numeroVia].filter(Boolean).join(' ');
+              const direccionCompleta = (p.direccionExacta && p.direccionExacta !== '-') ? p.direccionExacta : [p.tipoVia, p.nombreVia, p.numeracionMunicipal].filter(Boolean).join(' ');
               const totalTorres = p.numeroTorres || (c.towersData ? c.towersData.length : '-');
               const totalHps = p.totalHogares || p.numeroHogares || (c.towersData ? c.towersData.reduce((acc: number, t: any) => {
                 const pisos = parseInt(t.pisos_torre) || 0;
@@ -112,7 +112,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                   <td className="p-3 text-center sticky left-0 bg-white group-hover:bg-blue-50/50 z-10 shadow-[1px_0_0_0_#e5e7eb]" onClick={e => e.stopPropagation()}>
                     <input type="checkbox" className="rounded border-gray-300" />
                   </td>
-                  <td className="p-3 font-bold text-gray-800 uppercase sticky left-12 bg-white group-hover:bg-blue-50/50 z-10 shadow-[1px_0_0_0_#e5e7eb] max-w-[200px] truncate" title={p.nombreProyecto || c.title}>
+                  <td className="p-3 font-bold text-gray-800 uppercase sticky left-12 bg-white group-hover:bg-blue-50/50 z-10 shadow-[1px_0_0_0_#e5e7eb]" title={p.nombreProyecto || c.title}>
                     {p.nombreProyecto || c.title}
                   </td>
                   
@@ -133,7 +133,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                       </select>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600 truncate uppercase">
+                        <span className="text-xs font-semibold text-slate-600 uppercase">
                           {companiesList?.find((comp: any) => comp.id === c.companyId)?.name || c.company?.name || 'Sin Empresa'}
                         </span>
                         {(userRole === 'ADMIN' || userRole === 'BACKOFFICE') && (
@@ -156,7 +156,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800 truncate max-w-[150px]" title={stageName}>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800" title={stageName}>
                       {stageName}
                     </span>
                   </td>
@@ -165,40 +165,40 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                       <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[9px] font-bold shrink-0">
                         {getInitials(ownerName)}
                       </div>
-                      <span className="truncate max-w-[120px]">{ownerName}</span>
+                      <span className="">{ownerName}</span>
                     </div>
                   </td>
 
                   {/* Bloque Prospección */}
-                  <td className="p-3 text-gray-600 truncate max-w-[120px]" title={p.resultadoVisita}>{p.resultadoVisita || '-'}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[150px]" title={p.detalleVisita}>{p.detalleVisita || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.resultadoVisita}>{p.resultadoVisita || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.detalleVisita}>{p.detalleVisita || '-'}</td>
 
                   {/* Bloque Asignación */}
-                  <td className="p-3 text-gray-600">{p.tipoIngreso || '-'}</td>
-                  <td className="p-3 text-gray-600">{p.tipoEdificio || p.tipoProyecto || '-'}</td>
-                  <td className="p-3 text-gray-600">{formatBool(p.estreno || p.tipoConstruccion === 'Estreno')}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[150px]" title={direccionCompleta}>{direccionCompleta || '-'}</td>
-                  <td className="p-3 text-gray-600 font-mono text-[10px]">{p.coordenadas || '-'}</td>
-                  <td className="p-3 text-gray-600">{p.tipoAsignacion || p.tipoSolicitud || 'Asignar'}</td>
+                  <td className="p-3 text-gray-600">{p.ingreso || p.origenProspeccion || '-'}</td>
+                  <td className="p-3 text-gray-600">{p.clasificacionProyecto || p.tipoDesarrollo || '-'}</td>
+                  <td className="p-3 text-gray-600">{formatBool(p.estadoConstruccion === 'ESTRENO' || p.estadoConstruccion === 'Estreno')}</td>
+                  <td className="p-3 text-gray-600" title={direccionCompleta}>{direccionCompleta || '-'}</td>
+                  <td className="p-3 text-gray-600 font-mono text-[10px]">{p.coordenadasGps ? (p.coordenadasGps.x ? `${p.coordenadasGps.y}, ${p.coordenadasGps.x}` : p.coordenadasGps) : '-'}</td>
+                  <td className="p-3 text-gray-600">{p.tipoAsignacion || p.tipoDesarrollo || 'Asignar'}</td>
 
                   {/* Bloque Contacto */}
                   <td className="p-3 text-gray-600">{formatBool(p.juntaDirectiva)}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[120px]" title={p.nombreResponsable}>{p.nombreResponsable || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.nombreResponsable}>{p.nombreResponsable || '-'}</td>
                   <td className="p-3 text-gray-600">{p.cargoResponsable || '-'}</td>
                   <td className="p-3 text-gray-600 font-mono">{p.telefonoResponsable || p.telefono || '-'}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[120px]" title={p.correoResponsable || p.correo}>{p.correoResponsable || p.correo || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.correoResponsable || p.correo}>{p.correoResponsable || p.correo || '-'}</td>
 
                   {/* Bloque Técnico */}
                   <td className="p-3 text-gray-600">{p.departamento || 'Lima'}</td>
                   <td className="p-3 text-gray-600">{p.provincia || 'Lima'}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[100px]" title={p.distrito}>{p.distrito || '-'}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[120px]" title={p.urbanizacion}>{p.urbanizacion || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.distrito}>{p.distrito || '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.urbanizacionZona}>{p.urbanizacionZona || '-'}</td>
                   <td className="p-3 text-gray-600">{p.codigoPostal || '-'}</td>
                   <td className="p-3 text-gray-600 font-semibold text-center">{totalTorres}</td>
                   <td className="p-3 text-gray-600 font-semibold text-center">{totalHps}</td>
                   <td className="p-3 text-gray-600 font-semibold text-center">{p.clientesInteresados || '-'}</td>
-                  <td className="p-3 text-gray-600">{p.fechaInspeccion || '-'}</td>
-                  <td className="p-3 text-gray-600 truncate max-w-[100px]" title={p.rangoHorario || p.horarioInspeccion}>{p.rangoHorario || p.horarioInspeccion || '-'}</td>
+                  <td className="p-3 text-gray-600">{p.fechaVisitaTecnica ? new Date(p.fechaVisitaTecnica).toLocaleDateString() : '-'}</td>
+                  <td className="p-3 text-gray-600" title={p.horarioVisita}>{p.horarioVisita || '-'}</td>
 
                   {/* Bloque Auditoría */}
                   <td className="p-3 text-gray-400">{formatDate(c.createdAt)}</td>

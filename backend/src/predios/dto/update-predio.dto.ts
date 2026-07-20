@@ -1,4 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreatePredioDto } from './create-predio.dto';
+import { CreateRegistroInicialDto } from './create-registro-inicial.dto';
 
-export class UpdatePredioDto extends PartialType(CreatePredioDto) {}
+export class UpdatePredioDto extends PartialType(CreateRegistroInicialDto) {
+}

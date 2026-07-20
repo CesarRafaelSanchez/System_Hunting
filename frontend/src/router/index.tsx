@@ -4,13 +4,15 @@ import { Toaster } from 'sonner';
 import { useAuthStore } from '../store/useAuthStore';
 import { LoginView } from '../views/auth/LoginView';
 import { MainLayout } from '../components/layout/MainLayout';
-import { DashboardHunter } from '../views/hunter/DashboardHunter';
-import { TimeMark } from '../views/hunter/TimeMark';
-import { RegistrarPredio } from '../views/hunter/RegistrarPredio';
-import { AsignacionPredio } from '../views/hunter/AsignacionPredio';
-import { FichaDatosPredio } from '../views/hunter/FichaDatosPredio';
-import { Form2Asignacion } from '../views/hunter/Form2Asignacion';
-import { Form3FichaDatos } from '../views/hunter/Form3FichaDatos';
+import { Suspense } from 'react';
+
+const DashboardHunter = React.lazy(() => import('../views/hunter/DashboardHunter').then(m => ({ default: m.DashboardHunter })));
+const TimeMark = React.lazy(() => import('../views/hunter/TimeMark').then(m => ({ default: m.TimeMark })));
+const RegistrarPredio = React.lazy(() => import('../views/hunter/RegistrarPredio').then(m => ({ default: m.RegistrarPredio })));
+const AsignacionPredio = React.lazy(() => import('../views/hunter/AsignacionPredio').then(m => ({ default: m.AsignacionPredio })));
+const FichaDatosPredio = React.lazy(() => import('../views/hunter/FichaDatosPredio').then(m => ({ default: m.FichaDatosPredio })));
+const Form2Asignacion = React.lazy(() => import('../views/hunter/Form2Asignacion').then(m => ({ default: m.Form2Asignacion })));
+const Form3FichaDatos = React.lazy(() => import('../views/hunter/Form3FichaDatos').then(m => ({ default: m.Form3FichaDatos })));
 
 import { useParams } from 'react-router-dom';
 
@@ -36,17 +38,18 @@ const PublicForm3Route = () => {
   );
 };
 
-import { KanbanBoard } from '../views/backoffice/KanbanBoard';
-import { UserManagement } from '../views/admin/UserManagement';
-import { CompaniesManagement } from '../views/admin/CompaniesManagement';
-import { DashboardView } from '../views/dashboard/DashboardView';
-import { ValidacionExpedientes } from '../views/backoffice/ValidacionExpedientes';
+const KanbanBoard = React.lazy(() => import('../views/backoffice/KanbanBoard').then(m => ({ default: m.KanbanBoard })));
+const UserManagement = React.lazy(() => import('../views/admin/UserManagement').then(m => ({ default: m.UserManagement })));
+const CompaniesManagement = React.lazy(() => import('../views/admin/CompaniesManagement').then(m => ({ default: m.CompaniesManagement })));
+const DashboardView = React.lazy(() => import('../views/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
+const ValidacionExpedientes = React.lazy(() => import('../views/backoffice/ValidacionExpedientes').then(m => ({ default: m.ValidacionExpedientes })));
 import { SyncManager } from '../components/SyncManager';
-import { CompanySetupView } from '../views/auth/CompanySetupView';
+const CompanySetupView = React.lazy(() => import('../views/auth/CompanySetupView').then(m => ({ default: m.CompanySetupView })));
 
 // --- GUARDS DE RUTAS ---
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
+import { Outlet } from 'react-router-dom';
+const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: string[] }) => {
   const { isAuthenticated, user, logout } = useAuthStore();
 
   if (!isAuthenticated || !user || !user.role) {
@@ -69,7 +72,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return children ? <>{children}</> : <Outlet />;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -141,113 +144,104 @@ export const AppRouter = () => {
           </div>
         } />
         
-        <Route path="/public/asignacion/:opportunityId" element={<PublicForm2Route />} />
+        <Route path="/public/oportunidades/asignacion/:opportunityId" element={
+          <Suspense fallback={<div className="p-8 text-center text-gray-500">Cargando formulario...</div>}>
+            <PublicForm2Route />
+          </Suspense>
+        } />
         
-        <Route path="/public/ficha-datos/:opportunityId" element={<PublicForm3Route />} />
+        <Route path="/public/oportunidades/ficha-tecnica/:opportunityId" element={
+          <Suspense fallback={<div className="p-8 text-center text-gray-500">Cargando formulario...</div>}>
+            <PublicForm3Route />
+          </Suspense>
+        } />
 
-        {/* ONBOARDING */}
         <Route path="/setup-company" element={
           <OnboardingRoute>
             <CompanySetupView />
           </OnboardingRoute>
         } />
 
-        {/* LAYOUT MAESTRO (Protegido por Role) */}
         <Route element={<MainLayout />}>
-          {/* DASHBOARD GENERAL (Todos los roles) */}
           <Route path="/dashboard" element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'BACKOFFICE', 'HUNTER']}>
-              <DashboardView />
-            </ProtectedRoute>
+            <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+              <ProtectedRoute allowedRoles={['ADMIN', 'BACKOFFICE', 'HUNTER']}>
+                <DashboardView />
+              </ProtectedRoute>
+            </Suspense>
           } />
 
-          {/* RUTAS HUNTER */}
-          <Route path="/hunter" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
-              <DashboardHunter />
-            </ProtectedRoute>
-          } />
+          <Route element={<ProtectedRoute allowedRoles={['HUNTER']} />}>
+            <Route path="/hunter" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <DashboardHunter />
+              </Suspense>
+            } />
+            <Route path="/hunter/asistencia" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <TimeMark />
+              </Suspense>
+            } />
+            <Route path="/hunter/oportunidades/nueva" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <RegistrarPredio />
+              </Suspense>
+            } />
+            <Route path="/hunter/oportunidades" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <KanbanBoard />
+              </Suspense>
+            } />
+            <Route path="/hunter/oportunidades/asignacion" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <AsignacionPredio />
+              </Suspense>
+            } />
+            <Route path="/hunter/oportunidades/ficha-tecnica" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <FichaDatosPredio />
+              </Suspense>
+            } />
+          </Route>
           
-          <Route path="/hunter/asistencia" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
+          <Route element={<ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']} />}>
+            <Route path="/backoffice/oportunidades" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando tablero...</div>}>
+                <KanbanBoard />
+              </Suspense>
+            } />
+            <Route path="/backoffice/auditoria" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando validación...</div>}>
+                <ValidacionExpedientes />
+              </Suspense>
+            } />
+            <Route path="/backoffice/asistencia" element={
               <div className="p-4 flex justify-center w-full">
                 <TimeMark />
               </div>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/hunter/registro" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
-              <RegistrarPredio />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/hunter/pipeline" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
-              <KanbanBoard />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/hunter/asignacion" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
-              <AsignacionPredio />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/hunter/ficha" element={
-            <ProtectedRoute allowedRoles={['HUNTER']}>
-              <FichaDatosPredio />
-            </ProtectedRoute>
-          } />
-          
-          {/* RUTAS BACKOFFICE */}
-          <Route path="/backoffice" element={
-            <ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN', 'HUNTER']}>
-              <KanbanBoard />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/backoffice/validacion" element={
-            <ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']}>
-              <ValidacionExpedientes />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/backoffice/asistencia" element={
-            <ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']}>
-              <div className="p-4 flex justify-center w-full">
-                <TimeMark />
-              </div>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/backoffice/historial" element={
-            <ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']}>
+            } />
+            <Route path="/backoffice/historial" element={
               <Placeholder title="Historial de Oportunidades" />
-            </ProtectedRoute>
-          } />
+            } />
+          </Route>
 
-          {/* RUTAS ADMIN */}
-          <Route path="/admin" element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/admin" element={
               <Placeholder title="Configuraciones Globales" />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/admin/usuarios" element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
-              <UserManagement />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/admin/empresas" element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
-              <CompaniesManagement />
-            </ProtectedRoute>
-          } />
+            } />
+            <Route path="/admin/usuarios" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <UserManagement />
+              </Suspense>
+            } />
+            <Route path="/admin/empresas" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <CompaniesManagement />
+              </Suspense>
+            } />
+          </Route>
         </Route>
 
-        {/* REDIRECCIÓN POR DEFECTO */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

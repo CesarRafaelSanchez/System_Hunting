@@ -10,6 +10,18 @@ export const SyncManager: React.FC = () => {
         const queue = await getSyncQueue();
         if (queue.length === 0) return;
 
+        // Validar conexión real a internet con un micro-ping
+        try {
+          const res = await fetch('/api/health', { method: 'GET', headers: { 'Cache-Control': 'no-cache' } });
+          if (!res.ok) {
+            console.warn('Ping fallido, esperando red real.');
+            return;
+          }
+        } catch (pingError) {
+          console.warn('Falso positivo de red, abortando sincronización.', pingError);
+          return;
+        }
+
         toast.info(`Sincronizando ${queue.length} registro(s) guardado(s) offline...`);
         let synced = 0;
 

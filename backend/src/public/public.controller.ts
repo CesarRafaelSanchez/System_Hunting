@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseInterceptors, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { OpportunitiesService } from '../opportunities/opportunities.service';
 import { UsersService } from '../users/users.service';
 import { CreateOpportunityDto } from '../opportunities/dto/create-opportunity.dto';
@@ -7,9 +8,10 @@ import { TransactionManager } from '../core/decorators/transaction-manager.decor
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 
 import { PrediosService } from '../predios/predios.service';
-import { CreatePredioDto } from '../predios/dto/create-predio.dto';
+import { CreateRegistroInicialDto } from '../predios/dto/create-registro-inicial.dto';
 import { BadRequestException } from '@nestjs/common';
 
+@UseGuards(ThrottlerGuard)
 @Controller('public')
 export class PublicController {
   constructor(

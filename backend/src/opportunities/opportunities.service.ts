@@ -14,6 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Predio } from '../database/entities/predio.entity';
 import { Distrito } from '../database/entities/distrito.entity';
+import { FormSubmission } from '../database/entities/form-submission.entity';
 
 const parseBackendDate = (val: string) => {
   if (!val || val === '-') return null;
@@ -218,7 +219,10 @@ export class OpportunitiesService {
       }
 
       if (dto.horarioVisita && dto.horarioVisita !== '-')    predio.horarioVisita    = dto.horarioVisita;
-      if (dto.urbanizacion && dto.urbanizacion !== '-')     predio.urbanizacionZona = dto.urbanizacion;
+      if (dto.urbanizacionZona && dto.urbanizacionZona !== '-') predio.urbanizacionZona = dto.urbanizacionZona;
+      if (dto.urbanizacion && dto.urbanizacion !== '-')     predio.urbanizacionZona = dto.urbanizacion; // fallback for form3
+      if (dto.departamento && dto.departamento !== '-')     predio.departamento = dto.departamento;
+      if (dto.provincia && dto.provincia !== '-')           predio.provincia = dto.provincia;
       if (dto.codigoPostal && dto.codigoPostal !== '-')     predio.codigoPostal     = dto.codigoPostal;
       if (dto.clientesInteresados && dto.clientesInteresados !== '-') predio.clientesInteresados = parseInt(dto.clientesInteresados, 10) || 0;
 
@@ -366,9 +370,18 @@ export class OpportunitiesService {
 
     // ── Guardar el payload JSON en form_submissions (si hay datos) ────────────────
     if (dto && Object.keys(dto).length > 0) {
-      // Se ha removido el intento de guardar o actualizar en form_submissions
-      // porque esta tabla no existe en la base de datos MVP y ocasiona que
-      // las transacciones de Postgres sean abortadas.
+      // Intentar adivinar el código del formulario basado en el payload
+      let formCode = 'FORM_ACTUALIZACION';
+      if (dto.asignarF2 || dto.ingresoF2) formCode = 'FORM_ASIGNACION';
+      else if (dto.visitaInspeccionF3 || dto.horarioVisitaF3) formCode = 'FORM_FICHA_DATOS';
+
+      const submission = manager.create(FormSubmission, {
+        opportunityId: opp.id,
+        formCode,
+        submittedByUserId: user.id,
+        rawPayloadJson: dto,
+      });
+      await manager.save(submission);
     }
 
     opp.lastActivityAt = new Date();
@@ -603,9 +616,19 @@ export class OpportunitiesService {
   }
 
   async getSubmissions(id: string, user: any) {
-    // En el MVP la tabla form_submissions no existe. Toda la info 
-    // se guarda en el predio / oportunidad. Por ahora retornamos vacío
-    // para no romper la UI que espera un arreglo de form submissions.
-    return [];
+    const manager = this.opportunitiesRepository.manager;
+    
+    // Si no es ADMIN, verificar que la oportunidad pertenece a su compañía
+    if (user.role !== 'ADMIN') {
+      const opp = await manager.findOne(Opportunity, {
+        where: { id, companyId: user.companyId }
+      });
+      if (!opp) throw new NotFoundException('Oportunidad no encontrada o sin acceso');
+    }
+
+    return manager.find(FormSubmission, {
+      where: { opportunityId: id },
+      order: { createdAt: 'ASC' }
+    });
   }
 }
