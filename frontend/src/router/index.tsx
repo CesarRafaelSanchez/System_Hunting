@@ -46,6 +46,10 @@ const ValidacionExpedientes = React.lazy(() => import('../views/backoffice/Valid
 import { SyncManager } from '../components/SyncManager';
 const CompanySetupView = React.lazy(() => import('../views/auth/CompanySetupView').then(m => ({ default: m.CompanySetupView })));
 
+// Agency Views
+import { AgencyLayout } from '../components/layout/AgencyLayout';
+const AgencyDashboard = React.lazy(() => import('../views/agency/AgencyDashboard').then(m => ({ default: m.AgencyDashboard })));
+
 // --- GUARDS DE RUTAS ---
 
 import { Outlet } from 'react-router-dom';
@@ -57,8 +61,11 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
     return <Navigate to="/login" replace />;
   }
 
-  // Si no tiene empresa asociada, redirigir obligatoriamente al onboarding
+  // Si no tiene empresa asociada, y NO es super admin, redirigir obligatoriamente al onboarding
   if (!user.companyId) {
+    if (user.globalRole === 'AGENCY_ADMIN' || user.globalRole === 'AGENCY_SUPPORT') {
+      return <Navigate to="/agency/dashboard" replace />;
+    }
     return <Navigate to="/setup-company" replace />;
   }
 
@@ -80,6 +87,9 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (isAuthenticated && user && user.role) {
     if (!user.companyId) {
+      if (user.globalRole === 'AGENCY_ADMIN' || user.globalRole === 'AGENCY_SUPPORT') {
+        return <Navigate to="/agency/dashboard" replace />;
+      }
       return <Navigate to="/setup-company" replace />;
     }
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
@@ -101,6 +111,9 @@ const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Si el usuario ya tiene una empresa, redirigir al CRM normal
   if (user.companyId) {
+    if (user.globalRole === 'AGENCY_ADMIN' || user.globalRole === 'AGENCY_SUPPORT') {
+      return <Navigate to="/agency/dashboard" replace />;
+    }
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
     if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
@@ -161,6 +174,14 @@ export const AppRouter = () => {
             <CompanySetupView />
           </OnboardingRoute>
         } />
+
+        <Route element={<AgencyLayout />}>
+          <Route path="/agency/dashboard" element={
+            <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+              <AgencyDashboard />
+            </Suspense>
+          } />
+        </Route>
 
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={

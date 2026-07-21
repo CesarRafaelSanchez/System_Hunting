@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity('pipelines')
 export class Pipeline {
@@ -16,6 +16,13 @@ export class Pipeline {
 
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
+
+  @Column({ type: 'uuid', name: 'company_id', nullable: true }) // nullable temporarily for backwards compatibility
+  companyId: string;
+
+  @ManyToOne('Company')
+  @JoinColumn({ name: 'company_id' })
+  company: any; // Using any to avoid circular import if Company isn't imported, or we can just not define the relation if not strictly needed
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

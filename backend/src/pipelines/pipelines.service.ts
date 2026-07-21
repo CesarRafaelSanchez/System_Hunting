@@ -10,20 +10,29 @@ import { CreatePipelineDto, UpdatePipelineDto, PipelineStageDto } from './dto/cr
 export class PipelinesService {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-  async getActivePipeline(manager?: EntityManager) {
+  async getActivePipeline(companyId: string, manager?: EntityManager) {
     const mgr = manager || this.dataSource.manager;
     
+    // First try to find pipeline for this specific company
     let pipeline = await mgr.findOne(Pipeline, {
-      where: { isActive: true }
+      where: { isActive: true, companyId }
     });
+
+    // Fallback for backwards compatibility with global pipeline
+    if (!pipeline) {
+      pipeline = await mgr.findOne(Pipeline, {
+        where: { isActive: true, companyId: null as any }
+      });
+    }
 
     if (!pipeline) {
       // Crear pipeline por defecto automáticamente
       const defaultPipeline = mgr.create(Pipeline, {
         name: 'Pipeline Comercial Principal',
-        code: 'PCP',
+        code: `PCP-${companyId || 'GLOBAL'}`,
         description: 'Pipeline comercial por defecto autogenerado por el sistema.',
-        isActive: true
+        isActive: true,
+        companyId: companyId
       });
       const savedPipeline = await mgr.save(defaultPipeline);
 
@@ -111,24 +120,26 @@ export class PipelinesService {
     }
   }
 
-  async createPipeline(dto: CreatePipelineDto, manager: EntityManager) {
+  async createPipeline(dto: CreatePipelineDto, companyId: string, manager?: EntityManager) {
+    const mgr = manager || this.dataSource.manager;
     this.validateStages(dto.stages);
 
     // Desactivar cualquier pipeline activo existente
-    await manager.update(Pipeline, { isActive: true }, { isActive: false });
+    await mgr.update(Pipeline, { isActive: true, companyId }, { isActive: false });
 
     // Crear nuevo pipeline
-    const pipeline = manager.create(Pipeline, {
+    const pipeline = mgr.create(Pipeline, {
       name: dto.name,
       code: dto.code,
       description: dto.description,
-      isActive: true
+      isActive: true,
+      companyId: companyId
     });
-    const savedPipeline = await manager.save(pipeline);
+    const savedPipeline = await mgr.save(pipeline);
 
     // Crear etapas
     const stages = dto.stages.map((s, index) => {
-      return manager.create(PipelineStage, {
+      return mgr.create(PipelineStage, {
         pipelineId: savedPipeline.id,
         name: s.name,
         code: s.code,
@@ -141,15 +152,16 @@ export class PipelinesService {
       });
     });
 
-    await manager.save(stages);
+    await mgr.save(stages);
 
-    return this.getActivePipeline(manager);
+    return this.getActivePipeline(companyId, mgr);
   }
 
-  async updatePipeline(id: string, dto: UpdatePipelineDto, manager: EntityManager) {
+  async updatePipeline(id: string, dto: UpdatePipelineDto, companyId: string, manager?: EntityManager) {
+    const mgr = manager || this.dataSource.manager;
     this.validateStages(dto.stages);
 
-    const pipeline = await manager.findOne(Pipeline, { where: { id } });
+    const pipeline = await mgr.findOne(Pipeline, { where: { id, companyId } });
     if (!pipeline) {
       throw new NotFoundException('Pipeline no encontrado');
     }
@@ -158,48 +170,46 @@ export class PipelinesService {
     pipeline.name = dto.name;
     pipeline.code = dto.code;
     pipeline.description = dto.description || '';
-    await manager.save(pipeline);
+    await mgr.save(pipeline);
 
     // Obtener etapas actuales en la base de datos
-    const currentStages = await manager.find(PipelineStage, { where: { pipelineId: id } });
+    const currentStages = await mgr.find(PipelineStage, { where: { pipelineId: id } });
 
     // Identificar etapas eliminadas (las que están en DB pero no vienen en el DTO)
     const incomingIds = dto.stages.map(s => s.id).filter(Boolean);
     const deletedStages = currentStages.filter(s => !incomingIds.includes(s.id));
 
-    // Validar que las etapas eliminadas no tengan oportunidades asociadas
+    // Validar que no se estén eliminando etapas que ya tienen oportunidades
     for (const ds of deletedStages) {
-      const hasOpps = await manager.findOne(Opportunity, { where: { currentStageId: ds.id } });
+      const hasOpps = await mgr.findOne(Opportunity, { where: { currentStageId: ds.id } });
       if (hasOpps) {
-        throw new BadRequestException(
-          `No se puede eliminar la etapa "${ds.name}" porque tiene oportunidades comerciales asociadas.`
-        );
+        throw new BadRequestException(`No se puede eliminar la etapa "${ds.name}" porque tiene oportunidades (Leads) asociadas.`);
       }
     }
 
-    // Proceder a eliminar etapas obsoletas
     if (deletedStages.length > 0) {
-      await manager.remove(deletedStages);
+      await mgr.remove(deletedStages);
     }
 
-    // Actualizar o crear etapas recibidas
+    // Actualizar/Crear etapas
     const updatedStages = dto.stages.map((s, index) => {
-      const existing = currentStages.find(cs => cs.id === s.id);
-      if (existing) {
-        // Actualizar existente
-        existing.name = s.name;
-        existing.code = s.code;
-        existing.position = index + 1;
-        existing.stageType = s.stageType;
-        existing.isInitial = !!s.isInitial;
-        existing.isFinal = !!s.isFinal || !!s.isWon || !!s.isLost;
-        existing.isWon = !!s.isWon;
-        existing.isLost = !!s.isLost;
-        return existing;
+      // Si tiene ID y existe en DB, actualizamos
+      const existingStage = currentStages.find(cs => cs.id === s.id);
+      
+      if (existingStage) {
+        existingStage.name = s.name;
+        existingStage.code = s.code;
+        existingStage.position = index + 1;
+        existingStage.stageType = s.stageType;
+        existingStage.isInitial = !!s.isInitial;
+        existingStage.isFinal = !!s.isFinal || !!s.isWon || !!s.isLost;
+        existingStage.isWon = !!s.isWon;
+        existingStage.isLost = !!s.isLost;
+        return existingStage;
       } else {
-        // Crear nueva
-        return manager.create(PipelineStage, {
-          pipelineId: id,
+        // Es nueva etapa
+        return mgr.create(PipelineStage, {
+          pipelineId: pipeline.id,
           name: s.name,
           code: s.code,
           position: index + 1,
@@ -212,8 +222,8 @@ export class PipelinesService {
       }
     });
 
-    await manager.save(updatedStages);
+    await mgr.save(updatedStages);
 
-    return this.getActivePipeline(manager);
+    return this.getActivePipeline(companyId, mgr);
   }
 }

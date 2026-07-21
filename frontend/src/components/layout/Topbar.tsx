@@ -109,6 +109,14 @@ export const Topbar: React.FC = () => {
 
         <div className="flex items-center gap-6">
 
+          {(user?.globalRole === 'AGENCY_ADMIN' || user?.globalRole === 'AGENCY_SUPPORT') && (
+            <button 
+              onClick={() => navigate('/agency/dashboard')}
+              className="text-sm font-medium text-ghl-blue bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+            >
+              Volver a Agencia
+            </button>
+          )}
 
           <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
             <Bell className="w-5 h-5" />
