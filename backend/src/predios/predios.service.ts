@@ -15,6 +15,7 @@ import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { Pipeline } from '../database/entities/pipeline.entity';
 import { LeadSource } from '../database/entities/lead-source.entity';
 import { User } from '../database/entities/user.entity';
+import { UserCompany } from '../database/entities/user-company.entity';
 
 @Injectable()
 export class PrediosService {
@@ -142,11 +143,11 @@ export class PrediosService {
 
     let assignedOwnerId = user.id;
     if (dto.isReferral) {
-      const boUser = await manager.findOne(User, { where: { role: 'BACKOFFICE', companyId: assignedCompanyId } });
+      const boUser = await manager.findOne(UserCompany, { where: { role: 'BACKOFFICE', companyId: assignedCompanyId } });
       if (boUser) {
-        assignedOwnerId = boUser.id;
+        assignedOwnerId = boUser.userId;
       } else {
-        const adminUser = await manager.findOne(User, { where: { role: 'ADMIN' } });
+        const adminUser = await manager.findOne(User, { where: { globalRole: 'AGENCY_ADMIN' } });
         if (adminUser) assignedOwnerId = adminUser.id;
       }
     }

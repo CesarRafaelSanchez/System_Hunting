@@ -1,17 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Company } from './company.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { UserCompany } from './user-company.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid', name: 'company_id', nullable: true })
-  companyId: string | null;
-
-  @ManyToOne(() => Company)
-  @JoinColumn({ name: 'company_id' })
-  company: Company;
+  @OneToMany(() => UserCompany, userCompany => userCompany.user, { cascade: true })
+  userCompanies: UserCompany[];
 
   @Column({ length: 150, name: 'full_name' })
   fullName: string;
@@ -25,8 +21,8 @@ export class User {
   @Column({ length: 30, nullable: true })
   phone: string;
 
-  @Column({ length: 50, default: 'HUNTER' })
-  role: string;
+  @Column({ length: 50, name: 'global_role', nullable: true })
+  globalRole: string | null;
 
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;

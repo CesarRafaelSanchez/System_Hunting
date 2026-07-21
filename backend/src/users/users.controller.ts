@@ -21,6 +21,11 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('me/workspaces')
+  async getWorkspaces(@Request() req: any) {
+    return this.usersService.getUserWorkspaces(req.user);
+  }
+
   @Post()
   async create(@Request() req: any, @Body() dto: CreateUserDto) {
     this.checkAdmin(req);

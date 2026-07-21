@@ -8,6 +8,7 @@ import { EntityManager } from 'typeorm';
 import { SetupCompanyDto } from './dto/setup-company.dto';
 import { Company } from '../database/entities/company.entity';
 import { User } from '../database/entities/user.entity';
+import { UserCompany } from '../database/entities/user-company.entity';
 import { AuthService } from '../auth/auth.service';
 
 @UseGuards(AuthGuard('jwt'))
@@ -19,7 +20,9 @@ export class CompaniesController {
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserCompany)
+    private readonly userCompanyRepository: Repository<UserCompany>
   ) {}
 
   @Get()
@@ -44,8 +47,9 @@ export class CompaniesController {
     @Body() body: SetupCompanyDto,
     @TransactionManager() manager: EntityManager
   ) {
-    // 1. Validar que el usuario no tenga ya una empresa asociada
-    if (req.user.companyId) {
+    // 1. Validar que el usuario no tenga ya una empresa asociada si no es global
+    const existingUc = await manager.findOne(UserCompany, { where: { userId: req.user.id } });
+    if (existingUc && req.user.globalRole !== 'AGENCY_ADMIN') {
       throw new BadRequestException('El usuario ya está asociado a una empresa');
     }
 
@@ -71,14 +75,19 @@ export class CompaniesController {
     const savedCompany = await manager.save(company);
 
     // 4. Asociar el usuario actual a la nueva empresa
-    await manager.update(User, req.user.id, { companyId: savedCompany.id });
+    const uc = manager.create(UserCompany, {
+      userId: req.user.id,
+      companyId: savedCompany.id,
+      role: 'ACCOUNT_ADMIN',
+      isActive: true
+    });
+    await manager.save(uc);
 
-    // 5. Refrescar el token del usuario con el nuevo companyId
+    // 5. Refrescar el token del usuario (mantiene globalRole)
     const updatedUserPayload = {
       id: req.user.id,
       email: req.user.email,
-      role: req.user.role,
-      companyId: savedCompany.id
+      globalRole: req.user.globalRole
     };
     const refreshResult = await this.authService.refresh(updatedUserPayload);
 
@@ -88,10 +97,8 @@ export class CompaniesController {
       access_token: refreshResult.access_token,
       user: {
         id: req.user.id,
-        fullName: req.user.fullName,
         email: req.user.email,
-        companyId: savedCompany.id,
-        role: req.user.role
+        globalRole: req.user.globalRole
       }
     };
   }
@@ -101,21 +108,22 @@ export class CompaniesController {
     @Request() req: any,
     @Param('id') companyId: string
   ) {
-    if (req.user.role !== 'ADMIN') {
+    if (req.user.globalRole !== 'AGENCY_ADMIN' && req.user.role !== 'ACCOUNT_ADMIN') {
       throw new BadRequestException('No tienes permisos para ver esta información');
     }
-    const users = await this.userRepository.find({
+    const ucs = await this.userCompanyRepository.find({
       where: { companyId },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        isActive: true,
-        createdAt: true
-      }
+      relations: { user: true }
     });
-    return users;
+    
+    return ucs.map(uc => ({
+      id: uc.user.id,
+      email: uc.user.email,
+      fullName: uc.user.fullName,
+      role: uc.role,
+      isActive: uc.isActive,
+      createdAt: uc.user.createdAt
+    }));
   }
 
   @Post('admin')
@@ -124,8 +132,8 @@ export class CompaniesController {
     @Body() body: SetupCompanyDto,
     @TransactionManager() manager: EntityManager
   ) {
-    if (req.user.role !== 'ADMIN') {
-      throw new BadRequestException('No tienes permisos para crear empresas');
+    if (req.user.globalRole !== 'AGENCY_ADMIN') {
+      throw new BadRequestException('No tienes permisos para crear empresas globales');
     }
 
     const existingCompany = await manager.findOne(Company, {
@@ -148,7 +156,7 @@ export class CompaniesController {
     const savedCompany = await manager.save(company);
 
     return {
-      message: 'Empresa creada exitosamente',
+      message: 'Empresa creada exitosamente por admin global',
       company: savedCompany
     };
   }

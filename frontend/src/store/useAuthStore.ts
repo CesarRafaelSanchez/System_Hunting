@@ -5,8 +5,9 @@ interface UserData {
   id: string;
   email: string;
   fullName: string;
-  role: 'HUNTER' | 'BACKOFFICE' | 'ADMIN';
-  companyId: string | null;
+  role?: 'HUNTER' | 'BACKOFFICE' | 'ADMIN' | 'ACCOUNT_ADMIN' | 'AGENCY_ADMIN' | 'AGENCY_SUPPORT';
+  companyId?: string | null;
+  globalRole?: 'AGENCY_ADMIN' | 'AGENCY_SUPPORT' | null;
 }
 
 interface AuthState {

@@ -63,27 +63,49 @@ async function bootstrap() {
   const hunters: User[] = [];
   const backoffices: User[] = [];
 
+  const userCompanyRepo = dataSource.getRepository(require('../entities/user-company.entity').UserCompany);
+
   for (const u of usersToSeed) {
     let user = await userRepo.findOne({ where: { email: u.email } });
+    
+    // Map seed role to a global role if ADMIN, else null
+    const gRole = u.role === 'ADMIN' ? 'AGENCY_ADMIN' : null;
+    // Local role is the original role, unless it's ADMIN then they could be ACCOUNT_ADMIN locally if we want, but global role covers it.
+    const lRole = u.role === 'ADMIN' ? 'ACCOUNT_ADMIN' : u.role;
+
     if (!user) {
       user = userRepo.create({
         email: u.email,
         fullName: u.fullName,
-        companyId: company.id,
         passwordHash,
-        role: u.role,
+        globalRole: gRole,
         isActive: true
       });
       user = await userRepo.save(user);
-      console.log(`[+] Usuario Creado: ${u.email} con Rol ${u.role}`);
+      console.log(`[+] Usuario Creado: ${u.email} con Global Role ${gRole}`);
     } else {
-      user.role = u.role;
+      user.globalRole = gRole;
       user.passwordHash = passwordHash;
       await userRepo.save(user);
-      console.log(`[=] Usuario ya existe: ${u.email}, actualizado Rol/Password.`);
+      console.log(`[=] Usuario ya existe: ${u.email}, actualizado GlobalRol/Password.`);
     }
-    if (user.role === 'HUNTER') hunters.push(user);
-    if (user.role === 'BACKOFFICE') backoffices.push(user);
+
+    let uc = await userCompanyRepo.findOne({ where: { userId: user.id, companyId: company.id } });
+    if (!uc) {
+      uc = userCompanyRepo.create({
+        userId: user.id,
+        companyId: company.id,
+        role: lRole,
+        isActive: true
+      });
+      await userCompanyRepo.save(uc);
+    } else {
+      uc.role = lRole;
+      await userCompanyRepo.save(uc);
+    }
+
+    if (lRole === 'HUNTER') hunters.push(user);
+    if (lRole === 'BACKOFFICE') backoffices.push(user);
   }
 
   // (Optional) Crear un distrito base

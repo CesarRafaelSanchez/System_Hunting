@@ -29,7 +29,7 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo');
     }
 
-    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role, fullName: user.fullName };
+    const payload = { email: user.email, sub: user.id, globalRole: user.globalRole, fullName: user.fullName };
     
     // Aquí podríamos retornar también un Refresh Token
     return {
@@ -38,21 +38,20 @@ export class AuthService {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
-        companyId: user.companyId,
-        role: user.role
+        globalRole: user.globalRole
       }
     };
   }
 
   async refresh(user: any) {
-    const payload = { email: user.email, sub: user.id, companyId: user.companyId, role: user.role, fullName: user.fullName };
+    const payload = { email: user.email, sub: user.id, globalRole: user.globalRole, fullName: user.fullName };
     return {
       access_token: this.jwtService.sign(payload),
     };
   }
 
   async impersonate(targetUserId: string, currentUser: any) {
-    if (currentUser.role !== 'ADMIN') {
+    if (currentUser.globalRole !== 'AGENCY_ADMIN' && currentUser.globalRole !== 'ADMIN') {
       throw new UnauthorizedException('Solo los administradores pueden suplantar identidad');
     }
 
@@ -65,7 +64,7 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo');
     }
 
-    const payload = { email: targetUser.email, sub: targetUser.id, companyId: targetUser.companyId, role: targetUser.role, fullName: targetUser.fullName };
+    const payload = { email: targetUser.email, sub: targetUser.id, globalRole: targetUser.globalRole, fullName: targetUser.fullName };
     
     return {
       access_token: this.jwtService.sign(payload),
@@ -73,8 +72,7 @@ export class AuthService {
         id: targetUser.id,
         fullName: targetUser.fullName,
         email: targetUser.email,
-        companyId: targetUser.companyId,
-        role: targetUser.role
+        globalRole: targetUser.globalRole
       }
     };
   }

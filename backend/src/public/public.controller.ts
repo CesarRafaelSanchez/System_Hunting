@@ -34,8 +34,7 @@ export class PublicController {
   @Get('supervisors')
   async getSupervisors() {
     const allUsers = await this.usersService.findAll();
-    // Usually supervisors can be ADMIN, BACKOFFICE, or specifically SUPERVISOR. We return all for the frontend to list them
-    const supervisors = allUsers.filter(u => u.isActive && ['ADMIN', 'BACKOFFICE', 'SUPERVISOR'].includes(u.role));
+    const supervisors = allUsers.filter(u => u.isActive && u.role && ['ADMIN', 'BACKOFFICE', 'SUPERVISOR', 'AGENCY_ADMIN', 'ACCOUNT_ADMIN'].includes(u.role));
     return supervisors.map(s => ({
       id: s.id,
       fullName: s.fullName,
@@ -83,7 +82,7 @@ export class PublicController {
     const mockUser = {
       id: hunter.id,
       role: 'HUNTER',
-      companyId: hunter.companyId
+      companyId: hunter.userCompanies && hunter.userCompanies.length > 0 ? hunter.userCompanies[0].companyId : null
     };
 
     return this.prediosService.createPredio(mockUser, dto, manager);

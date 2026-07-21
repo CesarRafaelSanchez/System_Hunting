@@ -23,6 +23,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   companyId: string;
 
+  @IsEnum(['AGENCY_ADMIN', 'AGENCY_SUPPORT'])
+  @IsOptional()
+  globalRole?: string;
+
   @IsString()
   @IsOptional()
   @Length(6, 30)
