@@ -53,9 +53,17 @@ export class UsersService implements OnApplicationBootstrap {
     }
   }
 
-  async findAll() {
-    // Para simplificar la refactorización actual en el frontend, mapeamos el primer UserCompany como si fuera 'company'
+  async findAll(companyId?: string) {
+    // Si se provee companyId (y no es un admin global mirando todo), filtramos
+    const whereClause: any = {};
+    if (companyId) {
+      whereClause.userCompanies = {
+        companyId: companyId
+      };
+    }
+
     const users = await this.userRepository.find({
+      where: whereClause,
       relations: {
         userCompanies: {
           company: true
@@ -103,7 +111,7 @@ export class UsersService implements OnApplicationBootstrap {
 
     const ucs = await this.userCompanyRepository.find({
       where: { userId: user.id, isActive: true },
-      relations: ['company']
+      relations: { company: true }
     });
 
     return ucs.map(uc => ({

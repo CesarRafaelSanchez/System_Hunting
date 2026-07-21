@@ -5,8 +5,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('technical-records')
 export class TechnicalRecordsController {

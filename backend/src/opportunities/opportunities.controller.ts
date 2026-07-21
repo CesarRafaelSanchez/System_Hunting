@@ -1,3 +1,4 @@
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Controller, Post, Patch, Get, Body, Param, UseGuards, Request, UseInterceptors } from '@nestjs/common';
 import { OpportunitiesService } from './opportunities.service';
 import { CreateOpportunityDto } from './dto/create-opportunity.dto';
@@ -7,7 +8,7 @@ import { TransactionAuditInterceptor } from '../core/interceptors/transaction-au
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('opportunities')
 export class OpportunitiesController {

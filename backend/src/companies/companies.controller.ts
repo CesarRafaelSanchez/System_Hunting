@@ -26,7 +26,13 @@ export class CompaniesController {
   ) {}
 
   @Get()
-  async findAll() {
+  async findAll(@Request() req: any) {
+    if (req.user?.globalRole !== 'AGENCY_ADMIN' && req.user?.globalRole !== 'AGENCY_SUPPORT') {
+      // Si no es un super admin global, no puede listar todas las agencias
+      // Retornaremos solo las suyas o tiraremos Forbidden
+      // Pero 'users/me/workspaces' ya retorna sus empresas, así que aquí solo devolvemos vacío o error
+      throw new BadRequestException('No tienes permisos para ver la lista de empresas globales');
+    }
     return this.companyRepository.find({
       select: {
         id: true,

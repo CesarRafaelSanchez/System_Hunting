@@ -1,3 +1,4 @@
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Controller, Post, Get, Body, UseGuards, Request, UseInterceptors } from '@nestjs/common';
 import { TimeMarkService } from './time-mark.service';
 import { CheckInDto } from './dto/check-in.dto';
@@ -7,7 +8,7 @@ import { TransactionAuditInterceptor } from '../core/interceptors/transaction-au
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('attendance')
 export class TimeMarkController {

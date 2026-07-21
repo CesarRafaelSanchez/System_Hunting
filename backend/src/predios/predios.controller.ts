@@ -1,3 +1,4 @@
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Controller, Post, Put, Body, Param, UseGuards, Request, UseInterceptors } from '@nestjs/common';
 import { PrediosService } from './predios.service';
 import { CreateRegistroInicialDto } from './dto/create-registro-inicial.dto';
@@ -8,7 +9,7 @@ import { TransactionAuditInterceptor } from '../core/interceptors/transaction-au
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('predios')
 export class PrediosController {

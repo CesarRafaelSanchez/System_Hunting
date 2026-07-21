@@ -1,3 +1,4 @@
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Controller, Post, Get, Body, Param, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -6,7 +7,7 @@ import { TransactionManager } from '../core/decorators/transaction-manager.decor
 import { EntityManager } from 'typeorm';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}

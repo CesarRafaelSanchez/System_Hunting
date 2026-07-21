@@ -1,3 +1,4 @@
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, UseInterceptors, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
@@ -6,7 +7,7 @@ import { EntityManager } from 'typeorm';
 import { PipelinesService } from './pipelines.service';
 import { CreatePipelineDto, UpdatePipelineDto } from './dto/create-pipeline.dto';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('pipelines')
 export class PipelinesController {
