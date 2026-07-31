@@ -52,6 +52,14 @@ async function bootstrap() {
     });
     agencyAdmin = await userRepo.save(agencyAdmin);
     console.log(`[+] AGENCY_ADMIN Creado: ${adminEmail}`);
+  } else {
+    agencyAdmin.fullName = adminName;
+    agencyAdmin.passwordHash = adminPasswordHash;
+    agencyAdmin.globalRole = 'AGENCY_ADMIN';
+    agencyAdmin.role = 'AGENCY_ADMIN';
+    agencyAdmin.isActive = true;
+    agencyAdmin = await userRepo.save(agencyAdmin);
+    console.log(`[*] AGENCY_ADMIN Actualizado: ${adminEmail}`);
   }
 
   // 2. Crear las 3 Compañías Semilla
