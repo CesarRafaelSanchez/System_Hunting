@@ -60,7 +60,6 @@ const CompaniesManagement = React.lazy(() => import('../views/admin/CompaniesMan
 const DashboardView = React.lazy(() => import('../views/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
 const ValidacionExpedientes = React.lazy(() => import('../views/backoffice/ValidacionExpedientes').then(m => ({ default: m.ValidacionExpedientes })));
 import { SyncManager } from '../components/SyncManager';
-const CompanySetupView = React.lazy(() => import('../views/auth/CompanySetupView').then(m => ({ default: m.CompanySetupView })));
 const AgencyDashboard = React.lazy(() => import('../views/admin/AgencyDashboard').then(m => ({ default: m.AgencyDashboard })));
 
 // --- GUARDS DE RUTAS ---
@@ -74,9 +73,10 @@ const ProtectedRoute = ({ children, allowedRoles, bypassWorkspaceCheck }: { chil
     return <Navigate to="/login" replace />;
   }
 
-  // Si no tiene empresa asociada y no es AGENCY_ADMIN, redirigir obligatoriamente al onboarding
+  // Si no tiene empresa asociada y no es AGENCY_ADMIN, redirigir al login (usuario huérfano)
   if (!user.companyId && !activeWorkspace && user.globalRole !== 'AGENCY_ADMIN') {
-    return <Navigate to="/setup-company" replace />;
+    logout();
+    return <Navigate to="/login" replace />;
   }
 
   // Si no ha seleccionado un workspace y no se permite bypass
@@ -117,12 +117,13 @@ const ProtectedRoute = ({ children, allowedRoles, bypassWorkspaceCheck }: { chil
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, activeWorkspace } = useAuthStore();
+  const { isAuthenticated, user, activeWorkspace, logout } = useAuthStore();
   
   if (isAuthenticated && user && user.role) {
     const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
     if (!user.companyId && !activeWorkspace && !isAgencyAdmin) {
-      return <Navigate to="/setup-company" replace />;
+      logout();
+      return <Navigate to="/login" replace />;
     }
     if (!activeWorkspace && !isAgencyAdmin) {
       return <Navigate to="/workspaces" replace />;
@@ -133,31 +134,16 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN') return <Navigate to="/admin" replace />;
     
     if (isAgencyAdmin && !activeWorkspace) {
-      return <Navigate to="/workspaces" replace />;
+      if (user.companies && user.companies.length > 0) {
+        return <Navigate to="/workspaces" replace />;
+      }
+      return <Navigate to="/agency/dashboard" replace />;
     }
   }
   
   return <>{children}</>;
 };
 
-const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, activeWorkspace, logout } = useAuthStore();
-
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user.companyId || activeWorkspace || user.globalRole === 'AGENCY_ADMIN') {
-    if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
-    if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
-    if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
-    if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN' || user.globalRole === 'AGENCY_ADMIN') return <Navigate to="/admin" replace />;
-    logout();
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 // Componente Placeholder temporal para validación del contenido interno de layouts
 const Placeholder = ({ title }: { title: string }) => (
@@ -211,11 +197,7 @@ export const AppRouter = () => {
           </Suspense>
         } />
 
-        <Route path="/setup-company" element={
-          <OnboardingRoute>
-            <CompanySetupView />
-          </OnboardingRoute>
-        } />
+
 
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={
