@@ -36,7 +36,13 @@ export const LoginView: React.FC = () => {
       const isAgencyAdmin = data.user.globalRole === 'AGENCY_ADMIN';
 
       // 3. Redirección inteligente
-      if (isAgencyAdmin || companies.length > 1) {
+      if (isAgencyAdmin) {
+        if (companies.length > 0) {
+          navigate('/workspaces');
+        } else {
+          navigate('/agency/dashboard');
+        }
+      } else if (companies.length > 1) {
         navigate('/workspaces');
       } else if (companies.length === 1) {
         const singleCompany = companies[0];
@@ -51,7 +57,7 @@ export const LoginView: React.FC = () => {
         }
       } else {
         if (isAgencyAdmin) {
-          navigate('/workspaces');
+          navigate('/agency/dashboard');
         } else {
           setError('No tienes ninguna empresa asignada.');
         }
