@@ -4,11 +4,12 @@ import { CreateRegistroInicialDto } from './dto/create-registro-inicial.dto';
 import { UpdatePredioDto } from './dto/update-predio.dto';
 import { CreatePropertyContactDto } from './dto/create-property-contact.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('predios')
 export class PrediosController {

@@ -15,6 +15,8 @@ import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { Pipeline } from '../database/entities/pipeline.entity';
 import { LeadSource } from '../database/entities/lead-source.entity';
 import { User } from '../database/entities/user.entity';
+import { Company } from '../database/entities/company.entity';
+import { VentaFija } from '../database/entities/venta-fija.entity';
 
 @Injectable()
 export class PrediosService {
@@ -42,6 +44,15 @@ export class PrediosService {
 
   async createPredio(user: any, dto: CreateRegistroInicialDto, manager: EntityManager) {
     console.log('[createPredio] Received DTO in backend:', JSON.stringify(dto));
+
+    // Determinar la empresa y tipo de negocio para scoping
+    const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
+    const isBOOrAdmin = isAgencyAdmin || user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN' || user.role === 'BACKOFFICE';
+    
+    const assignedCompanyId = isBOOrAdmin && dto.companyId 
+      ? dto.companyId 
+      : user.companyId;
+
     // ── 1. Resolver el UUID del distrito desde su nombre ──────────────────────
     const distritoNombre = dto.distrito?.trim();
     if (!distritoNombre) {
@@ -57,17 +68,27 @@ export class PrediosService {
     }
 
     // ── 2. Resolver Pipeline y Etapa Inicial real desde la BD ─────────────────
-    const pipeline = await manager.findOne(Pipeline, { where: { isActive: true } });
+    const pipeline = await manager.findOne(Pipeline, { where: { isActive: true, companyId: assignedCompanyId } });
     if (!pipeline) {
-      throw new BadRequestException('No existe un pipeline configurado.');
+      throw new BadRequestException('No existe un pipeline configurado para tu empresa.');
     }
     
     let targetStage: PipelineStage | null = null;
-    if (user.role === 'ADMIN' || user.role === 'BACKOFFICE') {
+    if (isBOOrAdmin) {
       const codeToSearch = dto.initialStageCode || 'S4';
+      // Primero intentar match exacto
       targetStage = await manager.findOne(PipelineStage, {
         where: { pipelineId: pipeline.id, code: codeToSearch }
       });
+
+      // Si no hay match exacto, intentar match por sufijo (S4 → busca %-S4)
+      if (!targetStage && /^S\d+$/i.test(codeToSearch)) {
+        targetStage = await manager
+          .createQueryBuilder(PipelineStage, 'ps')
+          .where('ps.pipelineId = :pipelineId', { pipelineId: pipeline.id })
+          .andWhere('ps.code LIKE :suffix', { suffix: `%-${codeToSearch.toUpperCase()}` })
+          .getOne();
+      }
     }
 
     if (!targetStage) {
@@ -82,12 +103,7 @@ export class PrediosService {
 
     // ── 3. Crear el Predio mapeando campos del formulario ─────────────────────
     const totalHPs = parseInt(dto.numeroHPs as string, 10) || 0;
-    
     let direccionClean = (dto.direccion || '').trim();
-
-    const assignedCompanyId = (user.role === 'ADMIN' || user.role === 'BACKOFFICE') && dto.companyId 
-      ? dto.companyId 
-      : user.companyId;
 
     const predio = manager.create(Predio, {
       companyId: assignedCompanyId,
@@ -111,7 +127,7 @@ export class PrediosService {
       hunterPrincipalId: user.id
     });
 
-    // Coordenadas opcionales: "lat, lng" → point(lon, lat)
+    // Coordenadas opcionales
     if (dto.coordenadas) {
       const match = dto.coordenadas.match(/(-?\d+(?:\.\d+)?)\s*[,\s;\/]*\s*(-?\d+(?:\.\d+)?)/);
       if (match) {
@@ -125,7 +141,7 @@ export class PrediosService {
 
     const savedPredio = await manager.save(predio);
 
-    // ── 4. Torre por defecto con el número de HPs ─────────────────────────────
+    // Torre por defecto
     if (totalHPs > 0) {
       const torre = manager.create(Torre, { predioId: savedPredio.id, nombreTorre: 'Torre 1' });
       const savedTorre = await manager.save(torre);
@@ -133,7 +149,7 @@ export class PrediosService {
       await manager.save(piso);
     }
 
-    // ── 5. Génesis de la Oportunidad en la Etapa Inicial ─────────────────────
+    // ── 4. Resolver LeadSource ──────────────────────────────────────────────
     let leadSource = await manager.findOne(LeadSource, { where: { name: 'Scraping' } });
     if (!leadSource) {
       leadSource = manager.create(LeadSource, { id: '00000000-0000-0000-0000-000000000002', name: 'Scraping', code: 'SCR' });
@@ -151,6 +167,7 @@ export class PrediosService {
       }
     }
 
+    // ── 5. Génesis de la Oportunidad ─────────────────────────────────────────
     const opportunity = manager.create(Opportunity, {
       code: `OPP-${Date.now().toString().slice(-6)}`,
       companyId: assignedCompanyId,
@@ -159,8 +176,8 @@ export class PrediosService {
       currentOwnerUserId: assignedOwnerId,
       status: 'OPEN',
       leadSourceId: leadSource.id,
-      currentStageId: targetStage.id,  // UUID real de la BD
-      pipelineId: pipeline.id,          // UUID real de la BD
+      currentStageId: targetStage.id,
+      pipelineId: pipeline.id,
       currentStageEnteredAt: new Date(),
       isReferral: dto.isReferral || false,
       referredHunterName: dto.referredHunterName,
@@ -168,8 +185,9 @@ export class PrediosService {
     });
     const savedOpportunity = await manager.save(opportunity);
 
+    // ── 6. Registrar FormSubmission de Génesis ──────────────────────────────
     const submission = manager.create(FormSubmission, {
-      opportunityId: opportunity.id,
+      opportunityId: savedOpportunity.id,
       formCode: 'FORM_REGISTRO_INICIAL',
       submittedByUserId: user.id,
       rawPayloadJson: dto,
@@ -180,8 +198,13 @@ export class PrediosService {
   }
 
   async updatePredio(id: string, user: any, dto: UpdatePredioDto, manager: EntityManager) {
+    const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
+    const whereClause: any = { id };
+    if (!isAgencyAdmin) {
+      whereClause.companyId = user.companyId;
+    }
     const predio = await manager.findOne(Predio, {
-      where: { id, companyId: user.companyId },
+      where: whereClause,
       relations: { torres: { pisos: true } }
     });
 

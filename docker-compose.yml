@@ -24,6 +24,23 @@ services:
       - "6379:6379"
     restart: always
 
+  db_backup:
+    image: postgres:15-alpine
+    container_name: hunting_db_backup
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+    command: >
+      sh -c '
+      mkdir -p /backups;
+      echo "0 2 * * * pg_dump -h postgres -U ${DB_USER:-postgres} ${DB_NAME:-hunting_crm} > /backups/backup_$$(date +\%Y\%m\%d_\%H\%M\%S).sql" > /etc/crontabs/root;
+      crond -f -d 8
+      '
+    volumes:
+      - ./db_backups:/backups
+    depends_on:
+      - postgres
+    restart: always
+
   backend:
     build:
       context: ./backend

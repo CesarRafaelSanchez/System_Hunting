@@ -15,4 +15,8 @@ export class SetupCompanyDto {
   @IsNotEmpty()
   @Length(3, 50)
   slug: string;
+
+  @IsString()
+  @IsNotEmpty()
+  tipoNegocio?: 'HUNTING_EDIFICIOS' | 'VENTAS_B2B';
 }

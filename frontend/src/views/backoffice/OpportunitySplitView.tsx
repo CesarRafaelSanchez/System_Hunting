@@ -65,7 +65,8 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
   const [usersList, setUsersList] = useState<any[]>([]);
   
   const { user } = useAuthStore();
-  const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'ADMIN';
+  const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA' || user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN';
+  const isB2B = !card.propertyId || card.company?.tipoNegocio === 'VENTAS_B2B';
 
   const getCoordinates = () => {
     const gps = card.property?.coordenadasGps;
@@ -106,10 +107,41 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
   const hasForm2 = card.stage >= 5;
   const hasForm3 = card.stage >= 12;
 
+  const vf = card.ventaFija || card.data?.ventaFija || {};
+
   // Data State - mapped from specifications
   const [formData, setFormData] = useState<any>({
     companyId: card.companyId || card.property?.companyId || '',
     reasignarUserId: card.currentOwnerUserId || '',
+    notasPostventa: vf.notasPostventa || '',
+    // VentaFija B2B fields
+    ruc: vf.ruc || '',
+    razonSocial: vf.razonSocial || '',
+    representanteLegal: vf.representanteLegal || '',
+    dniRrll: vf.dniRrll || '',
+    celularRrll: vf.celularRrll || '',
+    correoElectronico: vf.correoElectronico || '',
+    nombrePadresRrll: vf.nombrePadresRrll || '',
+    fechaNacimientoRrll: vf.fechaNacimientoRrll || '',
+    lugarNacimientoRrll: vf.lugarNacimientoRrll || '',
+    tipoDomicilio: vf.tipoDomicilio || 'Casa',
+    direccionFiscal: vf.direccionFiscal || '',
+    direccionInstalacion: vf.direccionInstalacion || '',
+    departamento: vf.departamento || '',
+    provincia: vf.provincia || '',
+    distrito: vf.distrito || '',
+    referencia: vf.referencia || '',
+    tipoTecnologia: vf.tipoTecnologia || '',
+    tipoPlay: vf.tipoPlay || '',
+    velocidad: vf.velocidad || '',
+    cargoFijoSinIgv: vf.cargoFijoSinIgv || '',
+    campana: vf.campana || '',
+    adicionales: vf.adicionales || '',
+    tipoServicio: vf.tipoServicio || 'Fija',
+    cantidadLineas: vf.cantidadLineas || '',
+    tipoMovil: vf.tipoMovil || '',
+    planoUrl: vf.planoUrl || '',
+    observaciones: vf.observaciones || '',
     // Form 1
     ejecutivoF1: card.isReferral 
       ? card.referredHunterName 
@@ -314,7 +346,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
     <div className="fixed inset-y-0 right-0 w-[85%] max-w-7xl bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
       <div className="h-16 px-6 border-b border-gray-200 flex items-center justify-between bg-ghl-surface">
         <div>
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Detalle del Predio</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isB2B ? 'Detalle de la Venta B2B' : 'Detalle del Predio'}</p>
           <h2 className="text-2xl font-black text-gray-900 leading-none">{card.title || card.property?.nombreProyecto || 'Oportunidad Sin Nombre'}</h2>
         </div>
         <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-700 rounded-full transition-colors">
@@ -328,21 +360,37 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
         <div className="flex-1 flex flex-col border-r border-gray-200 bg-gray-50 overflow-hidden">
           {/* Tabs Navigation */}
           <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
-            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'basic_info' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('basic_info')}>
-              INFORMACIÓN BÁSICA
-            </button>
-            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_1' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_1')}>
-              REGISTRO DE PREDIO
-            </button>
-            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_2' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_2')}>
-              FORM. ASIGNACIÓN
-            </button>
-            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_3' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_3')}>
-              FICHA DE DATOS
-            </button>
-            <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'photos' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('photos')}>
-              FOTOS
-            </button>
+            {isB2B ? (
+              <>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'basic_info' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('basic_info')}>
+                  INFORMACIÓN BÁSICA
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'b2b_client' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('b2b_client')}>
+                  DETALLE DEL CLIENTE
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'b2b_service' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('b2b_service')}>
+                  DATOS DEL SERVICIO
+                </button>
+              </>
+            ) : (
+              <>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'basic_info' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('basic_info')}>
+                  INFORMACIÓN BÁSICA
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_1' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_1')}>
+                  REGISTRO DE PREDIO
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_2' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_2')}>
+                  FORM. ASIGNACIÓN
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'form_3' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('form_3')}>
+                  FICHA DE DATOS
+                </button>
+                <button className={`px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'photos' ? 'border-ghl-blue text-ghl-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('photos')}>
+                  FOTOS
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -352,7 +400,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Building className="w-5 h-5 text-ghl-lightBlue"/> Detalles de la Oportunidad</h4>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre del Proyecto / Predio</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{isB2B ? 'Razón Social / Cliente' : 'Nombre del Proyecto / Predio'}</label>
                     <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{card.title || card.property?.nombreProyecto || '-'}</p>
                   </div>
                   
@@ -381,7 +429,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                   )}
                   
                   <div className="col-span-1">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Hunter Asignado</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{isB2B ? 'Asesor Comercial' : 'Hunter Asignado'}</label>
                     <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100 flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-400" />
                       {card.currentOwnerUser?.fullName || card.property?.ejecutivo || 'Sin Asignar'}
@@ -390,9 +438,129 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
 
                   <div className="col-span-1">
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Distrito</label>
-                    <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{formData.distritoF2}</p>
+                    <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{isB2B ? (formData.distrito || '-') : formData.distritoF2}</p>
+                  </div>
+
+                  {/* Notas Postventa (Solo visibles si es B2B / Ventas) */}
+                  {(!card.propertyId || card.company?.tipoNegocio === 'VENTAS_B2B') && (
+                    <div className="col-span-2 mt-4 border-t border-gray-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Notas Postventa (Seguimiento de la venta)
+                      </label>
+                      {isEditing ? (
+                        <textarea
+                          name="notasPostventa"
+                          className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                          value={formData.notasPostventa || ''}
+                          onChange={handleChange}
+                          placeholder="Ingrese notas de seguimiento de postventa (ej: fecha de llamadas, confirmación de recibos, etc.)"
+                          rows={4}
+                        />
+                      ) : (
+                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 min-h-[100px] text-sm text-slate-700 whitespace-pre-wrap">
+                          {formData.notasPostventa || 'No hay notas postventa registradas aún.'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isB2B && activeTab === 'b2b_client' && (
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-6">
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <Building className="w-5 h-5 text-ghl-lightBlue"/> Datos Corporativos de la Empresa
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="RUC" name="ruc" value={formData.ruc} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Razón Social" name="razonSocial" value={formData.razonSocial} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Dirección Fiscal" name="direccionFiscal" value={formData.direccionFiscal} colSpan={2} isReadOnly={user?.role === 'POSTVENTA'} />
                   </div>
                 </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <User className="w-5 h-5 text-ghl-lightBlue"/> Representante Legal (RRLL)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Nombre del Representante" name="representanteLegal" value={formData.representanteLegal} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="DNI del RRLL" name="dniRrll" value={formData.dniRrll} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Celular de Contacto" name="celularRrll" value={formData.celularRrll} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Correo Electrónico" name="correoElectronico" value={formData.correoElectronico} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Nombre de Padre y Madre" name="nombrePadresRrll" value={formData.nombrePadresRrll} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Fecha de Nacimiento" name="fechaNacimientoRrll" value={formData.fechaNacimientoRrll} type="date" isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Lugar de Nacimiento" name="lugarNacimientoRrll" value={formData.lugarNacimientoRrll} isReadOnly={user?.role === 'POSTVENTA'} />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <Building className="w-5 h-5 text-ghl-lightBlue"/> Dirección de Instalación
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Dirección Exacta" name="direccionInstalacion" value={formData.direccionInstalacion} colSpan={2} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Departamento" name="departamento" value={formData.departamento} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Provincia" name="provincia" value={formData.provincia} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Distrito" name="distrito" value={formData.distrito} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Tipo de Domicilio" name="tipoDomicilio" value={formData.tipoDomicilio} type="select" options={['Casa', 'Oficina', 'Local Comercial', 'Departamento', 'Otro']} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Referencia" name="referencia" value={formData.referencia} colSpan={2} isReadOnly={user?.role === 'POSTVENTA'} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isB2B && activeTab === 'b2b_service' && (
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-6">
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-ghl-lightBlue"/> Datos del Plan / Servicio Contratado
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Tipo de Servicio" name="tipoServicio" value={formData.tipoServicio} type="select" options={['Fija', 'Movil']} isReadOnly={user?.role === 'POSTVENTA'} />
+                    
+                    {formData.tipoServicio === 'Fija' ? (
+                      <>
+                        <Field label="Tecnología" name="tipoTecnologia" value={formData.tipoTecnologia} type="select" options={['FTTH', 'HFC']} isReadOnly={user?.role === 'POSTVENTA'} />
+                        <Field label="Plan (Play)" name="tipoPlay" value={formData.tipoPlay} type="select" options={['1Play', '2Play', '3Play']} isReadOnly={user?.role === 'POSTVENTA'} />
+                        <Field label="Velocidad Contratada" name="velocidad" value={formData.velocidad} isReadOnly={user?.role === 'POSTVENTA'} />
+                        <Field label="Cargo Fijo Mensual (Sin IGV)" name="cargoFijoSinIgv" value={formData.cargoFijoSinIgv} isReadOnly={user?.role === 'POSTVENTA'} />
+                        <Field label="Campaña Aplicada" name="campana" value={formData.campana} isReadOnly={user?.role === 'POSTVENTA'} />
+                      </>
+                    ) : (
+                      <>
+                        <Field label="Tipo Móvil" name="tipoMovil" value={formData.tipoMovil} type="select" options={['Alta', 'Portabilidad']} isReadOnly={user?.role === 'POSTVENTA'} />
+                        <Field label="Cantidad de Líneas" name="cantidadLineas" value={formData.cantidadLineas} isReadOnly={user?.role === 'POSTVENTA'} />
+                      </>
+                    )}
+                    
+                    <Field label="Servicios Adicionales" name="adicionales" value={formData.adicionales} type="textarea" colSpan={2} isReadOnly={user?.role === 'POSTVENTA'} />
+                    <Field label="Observaciones de la Venta" name="observaciones" value={formData.observaciones} type="textarea" colSpan={2} isReadOnly={user?.role === 'POSTVENTA'} />
+                  </div>
+                </div>
+
+                {formData.planoUrl && (
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5 text-ghl-lightBlue"/> Croquis o Plano de Instalación
+                    </h4>
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/50">
+                      <FileText className="w-8 h-8 text-blue-500" />
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Archivo Adjunto</p>
+                        <a 
+                          href={formData.planoUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all"
+                        >
+                          Descargar Croquis / Plano
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -708,44 +876,82 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                     try {
                       const { opportunitiesService } = await import('../../services/opportunities.service');
                       
-                      const payload: any = {
-                        companyId: formData.companyId,
-                      };
-
-                      if (activeTab === 'form_3') {
-                        payload.nombreProyecto = formData.nombreProyectoF3;
-                        payload.tipoVia = formData.tipoViaF3;
-                        payload.nombreVia = formData.nombreViaF3;
-                        payload.numeracionMunicipal = formData.numeracionViaF3;
-                        payload.coordenadas = formData.coordenadasF3;
-                        payload.tipoConstruccion = formData.tipoConstruccionF3;
-                        payload.juntaDirectiva = formData.juntaDirectivaF3;
-                        payload.cargoResponsable = formData.cargoResponsableF3;
-                        payload.nombreResponsable = formData.nombreResponsableF3;
-                        payload.telefonoResponsable = formData.telefonoResponsableF3;
-                        payload.correoResponsable = formData.correoResponsableF3;
-                        payload.visitaInspeccion = formData.visitaInspeccionF3;
-                        payload.horarioVisita = formData.horarioVisitaF3;
-                        payload.departamento = formData.departamentoF3;
-                        payload.provincia = formData.provinciaF3;
-                        payload.urbanizacionZona = formData.urbanizacionF3;
-                        payload.codigoPostal = formData.codigoPostalF3;
-                        payload.clientesInteresados = formData.clientesInteresadosF3 ? parseInt(formData.clientesInteresadosF3, 10) : undefined;
-                        payload.inmobiliaria = formData.inmobiliariaF3;
-                        payload.fechaEntrega = formData.fechaEntregaF3;
-                        payload.fechaMontantes = formData.fechaMontantesF3;
-                        payload.fechaMecha = formData.fechaMechaF3;
-                        payload.towersData = towers;
+                      let payload: any = {};
+                      if (user?.role === 'POSTVENTA') {
+                        payload = {
+                          notasPostventa: formData.notasPostventa,
+                        };
+                      } else if (isB2B) {
+                        payload = {
+                          companyId: formData.companyId,
+                          ruc: formData.ruc,
+                          razonSocial: formData.razonSocial,
+                          representanteLegal: formData.representanteLegal,
+                          dniRrll: formData.dniRrll,
+                          celularRrll: formData.celularRrll,
+                          correoElectronico: formData.correoElectronico,
+                          nombrePadresRrll: formData.nombrePadresRrll,
+                          fechaNacimientoRrll: formData.fechaNacimientoRrll,
+                          lugarNacimientoRrll: formData.lugarNacimientoRrll,
+                          tipoDomicilio: formData.tipoDomicilio,
+                          direccionFiscal: formData.direccionFiscal,
+                          direccionInstalacion: formData.direccionInstalacion,
+                          departamento: formData.departamento,
+                          provincia: formData.provincia,
+                          distrito: formData.distrito,
+                          referencia: formData.referencia,
+                          tipoTecnologia: formData.tipoTecnologia,
+                          tipoPlay: formData.tipoPlay,
+                          velocidad: formData.velocidad,
+                          cargoFijoSinIgv: formData.cargoFijoSinIgv,
+                          campana: formData.campana,
+                          adicionales: formData.adicionales,
+                          tipoServicio: formData.tipoServicio,
+                          cantidadLineas: formData.cantidadLineas,
+                          tipoMovil: formData.tipoMovil,
+                          observaciones: formData.observaciones,
+                          notasPostventa: formData.notasPostventa,
+                        };
                       } else {
-                        payload.nombreProyecto = formData.nombreProyectoF2;
-                        payload.tipoVia = formData.tipoViaF2;
-                        payload.nombreVia = formData.nombreViaF2;
-                        payload.numeracionMunicipal = formData.numeracionViaF2;
-                        payload.numeroHogares = formData.numeroHpsF2 ? parseInt(formData.numeroHpsF2, 10) : undefined;
-                        payload.estadoConstruccion = formData.estrenoF2;
-                        payload.terminoMontantes = formData.fechaMontantesF2;
-                        payload.fechaEntrega = formData.fechaEntregaF2;
-                        payload.inmobiliaria = formData.inmobiliariaF2;
+                        payload = {
+                          companyId: formData.companyId,
+                        };
+
+                        if (activeTab === 'form_3') {
+                          payload.nombreProyecto = formData.nombreProyectoF3;
+                          payload.tipoVia = formData.tipoViaF3;
+                          payload.nombreVia = formData.nombreViaF3;
+                          payload.numeracionMunicipal = formData.numeracionViaF3;
+                          payload.coordenadas = formData.coordenadasF3;
+                          payload.tipoConstruccion = formData.tipoConstruccionF3;
+                          payload.juntaDirectiva = formData.juntaDirectivaF3;
+                          payload.cargoResponsable = formData.cargoResponsableF3;
+                          payload.nombreResponsable = formData.nombreResponsableF3;
+                          payload.telefonoResponsable = formData.telefonoResponsableF3;
+                          payload.correoResponsable = formData.correoResponsableF3;
+                          payload.visitaInspeccion = formData.visitaInspeccionF3;
+                          payload.horarioVisita = formData.horarioVisitaF3;
+                          payload.departamento = formData.departamentoF3;
+                          payload.provincia = formData.provinciaF3;
+                          payload.urbanizacionZona = formData.urbanizacionF3;
+                          payload.codigoPostal = formData.codigoPostalF3;
+                          payload.clientesInteresados = formData.clientesInteresadosF3 ? parseInt(formData.clientesInteresadosF3, 10) : undefined;
+                          payload.inmobiliaria = formData.inmobiliariaF3;
+                          payload.fechaEntrega = formData.fechaEntregaF3;
+                          payload.fechaMontantes = formData.fechaMontantesF3;
+                          payload.fechaMecha = formData.fechaMechaF3;
+                          payload.towersData = towers;
+                        } else {
+                          payload.nombreProyecto = formData.nombreProyectoF2;
+                          payload.tipoVia = formData.tipoViaF2;
+                          payload.nombreVia = formData.nombreViaF2;
+                          payload.numeracionMunicipal = formData.numeracionViaF2;
+                          payload.numeroHogares = formData.numeroHpsF2 ? parseInt(formData.numeroHpsF2, 10) : undefined;
+                          payload.estadoConstruccion = formData.estrenoF2;
+                          payload.terminoMontantes = formData.fechaMontantesF2;
+                          payload.fechaEntrega = formData.fechaEntregaF2;
+                          payload.inmobiliaria = formData.inmobiliariaF2;
+                        }
                       }
 
                       await opportunitiesService.updateForms(card.id, payload);

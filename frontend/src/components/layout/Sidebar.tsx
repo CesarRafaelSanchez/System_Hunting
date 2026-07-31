@@ -4,45 +4,92 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { LayoutDashboard, Clock, ClipboardList, History, ChevronLeft, ChevronRight, Settings, BarChart3, Building2 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, activeWorkspace } = useAuthStore();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const role = user?.role || 'HUNTER';
 
-  // Navegación contextual por rol
+  // Navegación contextual por rol y tipo de negocio
   const getNavLinks = () => {
-    switch (role) {
-      case 'HUNTER':
-        return [
-          { name: 'Dashboard', path: '/hunter', icon: BarChart3 },
-          { name: 'Oportunidades', path: '/hunter/oportunidades', icon: LayoutDashboard },
-          { name: 'Asistencia', path: '/hunter/asistencia', icon: Clock },
-          { name: 'Registro de Predio', path: '/hunter/oportunidades/nueva', icon: ClipboardList },
-          { name: 'Asignación de Predio', path: '/hunter/oportunidades/asignacion', icon: ClipboardList },
-          { name: 'Ficha de Datos', path: '/hunter/oportunidades/ficha-tecnica', icon: ClipboardList },
-        ];
-      case 'BACKOFFICE':
-        return [
-          { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-          { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
-          { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
-          { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
-          { name: 'Historial', path: '/backoffice/historial', icon: History },
-        ];
-      case 'ADMIN':
-        return [
-          { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-          { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
-          { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
-          { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
-          { name: 'Empresas', path: '/admin/empresas', icon: Building2 },
-          { name: 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
-          { name: 'Historial', path: '/backoffice/historial', icon: History },
-        ];
-      default:
-        return [];
+    const isVentas = activeWorkspace?.tipoNegocio === 'VENTAS_B2B';
+
+    if (role === 'AGENCY_ADMIN' || user?.globalRole === 'AGENCY_ADMIN') {
+      return [
+        { name: 'Panel de Agencia', path: '/agency/dashboard', icon: BarChart3 },
+        { name: 'Empresas', path: '/admin/empresas', icon: Building2 },
+        { name: 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
+      ];
     }
+
+    if (role === 'HUNTER') {
+      return [
+        { name: 'Dashboard', path: '/hunter', icon: BarChart3 },
+        { name: 'Oportunidades', path: '/hunter/oportunidades', icon: LayoutDashboard },
+        { name: 'Asistencia', path: '/hunter/asistencia', icon: Clock },
+        { name: 'Registro de Predio', path: '/hunter/oportunidades/nueva', icon: ClipboardList },
+        { name: 'Asignación de Predio', path: '/hunter/oportunidades/asignacion', icon: ClipboardList },
+        { name: 'Ficha de Datos', path: '/hunter/oportunidades/ficha-tecnica', icon: ClipboardList },
+      ];
+    }
+
+    if (role === 'ASESOR_VENTAS') {
+      return [
+        { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
+        { name: 'Oportunidades', path: '/sales/oportunidades', icon: LayoutDashboard },
+        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
+      ];
+    }
+
+    if (role === 'SUPERVISOR_VENTAS') {
+      return [
+        { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
+        { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
+        { name: 'Historial', path: '/backoffice/historial', icon: History },
+      ];
+    }
+
+    if (role === 'BACKOFFICE_VENTAS') {
+      return [
+        { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
+        { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
+        { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
+        { name: 'Historial', path: '/backoffice/historial', icon: History },
+      ];
+    }
+
+    if (role === 'POSTVENTA') {
+      return [
+        { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
+        { name: 'Pipeline Postventa', path: '/sales/oportunidades', icon: LayoutDashboard },
+        { name: 'Historial', path: '/backoffice/historial', icon: History },
+      ];
+    }
+
+    if (role === 'BACKOFFICE' || role === 'SUPERVISOR_HUNTING') {
+      return [
+        { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
+        { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
+        { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
+        { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
+        { name: 'Historial', path: '/backoffice/historial', icon: History },
+      ];
+    }
+
+    if (role === 'ADMIN' || role === 'ACCOUNT_ADMIN') {
+      return [
+        { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
+        { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
+        ...(!isVentas ? [
+          { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
+          { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
+        ] : []),
+        { name: isVentas ? 'Usuarios y Asesores' : 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
+        { name: 'Historial', path: '/backoffice/historial', icon: History },
+      ];
+    }
+
+    return [];
   };
 
   const navLinks = getNavLinks();
@@ -51,9 +98,13 @@ export const Sidebar: React.FC = () => {
     <aside className={`bg-ghl-sidebar text-white flex flex-col h-full shadow-lg transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-16' : 'w-56'}`}>
       <div className="h-16 flex items-center justify-center px-4 border-b border-gray-800">
         {!isCollapsed ? (
-          <h1 className="text-xl font-bold tracking-wider truncate w-full text-center">HUNTING</h1>
+          <h1 className="text-xl font-bold tracking-wider truncate w-full text-center uppercase">
+            {activeWorkspace?.name || 'HUNTING'}
+          </h1>
         ) : (
-          <h1 className="text-xl font-bold tracking-wider truncate">H</h1>
+          <h1 className="text-xl font-bold tracking-wider truncate uppercase">
+            {activeWorkspace?.name?.[0] || 'H'}
+          </h1>
         )}
       </div>
       

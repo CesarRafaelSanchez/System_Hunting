@@ -107,4 +107,44 @@ export class CreateRegistroInicialDto {
   @IsString()
   @IsOptional()
   partnerSupervisorId?: string;
+
+  // B2B Sales Fields
+  @IsString()
+  @IsOptional()
+  ruc?: string;
+
+  @IsString()
+  @IsOptional()
+  razonSocial?: string;
+
+  @IsString()
+  @IsOptional()
+  representanteLegal?: string;
+
+  @IsString()
+  @IsOptional()
+  dniRrll?: string;
+
+  @IsString()
+  @IsOptional()
+  celularRrll?: string;
+
+  @IsString()
+  @IsOptional()
+  correoElectronico?: string;
+
+  @IsString()
+  @IsOptional()
+  direccionInstalacion?: string;
+
+  @IsString()
+  @IsOptional()
+  tipoTecnologia?: string;
+
+  @IsString()
+  @IsOptional()
+  tipoPlay?: string;
+
+  @IsOptional()
+  cargoFijoSinIgv?: number | string;
 }

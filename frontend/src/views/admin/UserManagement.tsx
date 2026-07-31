@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchApi } from '../../services/api.client';
+import { useAuthStore } from '../../store/useAuthStore';
 import { Edit2, Power, PowerOff, X, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -7,6 +8,7 @@ interface Company {
   id: string;
   name: string;
   slug: string;
+  tipoNegocio?: 'HUNTING_EDIFICIOS' | 'VENTAS_B2B';
 }
 
 interface User {
@@ -17,9 +19,12 @@ interface User {
   isActive: boolean;
   company?: Company;
   phone?: string;
+  supervisorId?: string | null;
+  supervisor?: { id: string; fullName: string } | null;
 }
 
 export const UserManagement: React.FC = () => {
+  const { user: currentUser, activeWorkspace } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,7 +40,10 @@ export const UserManagement: React.FC = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('HUNTER');
   const [companyId, setCompanyId] = useState('');
+  const [supervisorId, setSupervisorId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const isAgencyAdmin = currentUser?.globalRole === 'AGENCY_ADMIN';
 
   const loadUsers = async () => {
     try {
@@ -51,8 +59,15 @@ export const UserManagement: React.FC = () => {
     try {
       const data = await fetchApi<Company[]>('/companies');
       setCompanies(data);
-      if (data.length > 0 && !companyId) {
-        setCompanyId(data[0].id);
+      
+      // Auto-select company
+      if (isAgencyAdmin) {
+        if (data.length > 0 && !companyId) {
+          setCompanyId(data[0].id);
+        }
+      } else {
+        const targetId = activeWorkspace?.id || currentUser?.companyId || '';
+        setCompanyId(targetId);
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -68,36 +83,73 @@ export const UserManagement: React.FC = () => {
     init();
   }, []);
 
+  // Determine business type of selected company to display available roles
+  const getSelectedBusinessType = () => {
+    const selected = companies.find(c => c.id === companyId);
+    if (selected?.tipoNegocio) return selected.tipoNegocio;
+    return activeWorkspace?.tipoNegocio || 'HUNTING_EDIFICIOS';
+  };
+
+  const businessType = getSelectedBusinessType();
+
+  const getSupervisorsList = () => {
+    return users.filter(u => 
+      (u.company?.id === companyId || u.company?.id === null) && 
+      (u.role === 'SUPERVISOR_VENTAS' || u.role === 'SUPERVISOR_HUNTING')
+    );
+  };
+
+  // Reset default role when business type changes
+  useEffect(() => {
+    if (companyId === '') {
+      setRole('AGENCY_ADMIN');
+    } else if (businessType === 'VENTAS_B2B') {
+      if (!['ACCOUNT_ADMIN', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA', 'ASESOR_VENTAS'].includes(role)) {
+        setRole('ASESOR_VENTAS');
+      }
+    } else {
+      if (!['ACCOUNT_ADMIN', 'SUPERVISOR_HUNTING', 'BACKOFFICE', 'HUNTER'].includes(role)) {
+        setRole('HUNTER');
+      }
+    }
+  }, [companyId, businessType]);
+
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFullName('');
     setEmail('');
     setPhone('');
     setPassword('');
-    setRole('HUNTER');
-    if (companies.length > 0) {
-      setCompanyId(companies[0].id);
-    } else {
-      setCompanyId('');
-    }
+    setSupervisorId('');
+    
+    const targetCompanyId = isAgencyAdmin 
+      ? (companies[0]?.id || '') 
+      : (activeWorkspace?.id || currentUser?.companyId || '');
+    
+    setCompanyId(targetCompanyId);
+    
+    const initialBType = companies.find(c => c.id === targetCompanyId)?.tipoNegocio || activeWorkspace?.tipoNegocio || 'HUNTING_EDIFICIOS';
+    setRole(initialBType === 'VENTAS_B2B' ? 'ASESOR_VENTAS' : 'HUNTER');
+    
     setIsOpen(true);
   };
 
-  const handleOpenEdit = (user: User) => {
-    setEditingUser(user);
-    setFullName(user.fullName);
-    setEmail(user.email);
-    setPhone(user.phone || '');
-    setPassword(''); // Opcional al editar
-    setRole(user.role);
-    setCompanyId(user.company?.id || '');
+  const handleOpenEdit = (u: User) => {
+    setEditingUser(u);
+    setFullName(u.fullName);
+    setEmail(u.email);
+    setPhone(u.phone || '');
+    setPassword('');
+    setRole(u.role);
+    setCompanyId(u.company?.id || '');
+    setSupervisorId(u.supervisorId || '');
     setIsOpen(true);
   };
 
-  const handleToggleStatus = async (user: User) => {
+  const handleToggleStatus = async (u: User) => {
     try {
-      await fetchApi(`/users/${user.id}/status`, { method: 'PATCH' });
-      toast.success(`Usuario ${user.isActive ? 'desactivado' : 'activado'} correctamente`);
+      await fetchApi(`/users/${u.id}/status`, { method: 'PATCH' });
+      toast.success(`Usuario ${u.isActive ? 'desactivado' : 'activado'} correctamente`);
       loadUsers();
     } catch (error: any) {
       const msg = error.data?.message || error.message || 'Error al cambiar estado del usuario';
@@ -107,7 +159,7 @@ export const UserManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !role || !companyId) {
+    if (!fullName || !email || !role || (!companyId && role !== 'AGENCY_ADMIN')) {
       toast.error('Todos los campos son obligatorios');
       return;
     }
@@ -120,7 +172,6 @@ export const UserManagement: React.FC = () => {
     setSubmitting(true);
     try {
       if (editingUser) {
-        // Actualizar
         await fetchApi(`/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -129,13 +180,14 @@ export const UserManagement: React.FC = () => {
             email,
             phone,
             role,
-            companyId,
+            globalRole: role === 'AGENCY_ADMIN' ? 'AGENCY_ADMIN' : undefined,
+            companyId: role === 'AGENCY_ADMIN' ? undefined : companyId,
+            supervisorId: supervisorId || null,
             ...(password ? { password } : {})
           })
         });
         toast.success('Usuario actualizado correctamente');
       } else {
-        // Crear
         await fetchApi('/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -145,7 +197,9 @@ export const UserManagement: React.FC = () => {
             phone,
             password,
             role,
-            companyId
+            globalRole: role === 'AGENCY_ADMIN' ? 'AGENCY_ADMIN' : undefined,
+            companyId: role === 'AGENCY_ADMIN' ? undefined : companyId,
+            supervisorId: supervisorId || null
           })
         });
         toast.success('Usuario registrado correctamente');
@@ -163,11 +217,19 @@ export const UserManagement: React.FC = () => {
   const getRoleBadgeClass = (roleStr: string) => {
     switch (roleStr) {
       case 'ADMIN':
+      case 'ACCOUNT_ADMIN':
         return 'bg-red-50 text-red-700 border border-red-200';
       case 'BACKOFFICE':
+      case 'SUPERVISOR_HUNTING':
+      case 'SUPERVISOR_VENTAS':
+      case 'BACKOFFICE_VENTAS':
+      case 'POSTVENTA':
         return 'bg-blue-50 text-blue-700 border border-blue-200';
       case 'HUNTER':
+      case 'ASESOR_VENTAS':
         return 'bg-green-50 text-green-700 border border-green-200';
+      case 'AGENCY_ADMIN':
+        return 'bg-purple-100 text-purple-800 border border-purple-300';
       default:
         return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
@@ -182,7 +244,7 @@ export const UserManagement: React.FC = () => {
         </div>
         <button
           onClick={handleOpenCreate}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all flex items-center gap-2 shadow-sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all flex items-center gap-2 shadow-sm cursor-pointer"
         >
           <UserPlus className="w-4 h-4" />
           Registrar Usuario
@@ -201,6 +263,7 @@ export const UserManagement: React.FC = () => {
                   <th className="px-6 py-4 font-semibold">Correo Electrónico</th>
                   <th className="px-6 py-4 font-semibold">Teléfono</th>
                   <th className="px-6 py-4 font-semibold">Empresa</th>
+                  <th className="px-6 py-4 font-semibold">Supervisor</th>
                   <th className="px-6 py-4 font-semibold">Rol</th>
                   <th className="px-6 py-4 font-semibold text-center">Acciones</th>
                 </tr>
@@ -220,6 +283,9 @@ export const UserManagement: React.FC = () => {
                     <td className="px-6 py-4 text-gray-600">
                       {user.company?.name || <span className="text-gray-400 italic">Sin empresa</span>}
                     </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {user.supervisor?.fullName || <span className="text-gray-400 italic">Sin asignar</span>}
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${getRoleBadgeClass(user.role)}`}>
                         {user.role}
@@ -229,14 +295,14 @@ export const UserManagement: React.FC = () => {
                       <div className="flex justify-center gap-2">
                         <button 
                           onClick={() => handleOpenEdit(user)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                           title="Editar Usuario"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleToggleStatus(user)}
-                          className={`p-1.5 rounded-md transition-colors ${user.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
+                          className={`p-1.5 rounded-md transition-colors cursor-pointer ${user.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
                           title={user.isActive ? 'Desactivar' : 'Activar'}
                         >
                           {user.isActive ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
@@ -247,7 +313,7 @@ export const UserManagement: React.FC = () => {
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       No hay usuarios registrados.
                     </td>
                   </tr>
@@ -264,7 +330,7 @@ export const UserManagement: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
             <button
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -335,52 +401,87 @@ export const UserManagement: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                    Rol en el Sistema
+                    Empresa
+                  </label>
+                  {isAgencyAdmin ? (
+                    <select
+                      value={companyId}
+                      onChange={(e) => setCompanyId(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white transition-all"
+                    >
+                      <option value="">Sin Empresa (Superadmin Global)</option>
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-600 text-sm font-semibold truncate">
+                      {activeWorkspace?.name || 'Mi Empresa'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Rol
                   </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white transition-all"
                   >
-                    <option value="HUNTER">Hunter (Campo)</option>
-                    <option value="BACKOFFICE">BackOffice</option>
-                    <option value="ADMIN">Administrador</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                    Empresa
-                  </label>
-                  <select
-                    value={companyId}
-                    onChange={(e) => setCompanyId(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white transition-all"
-                    required
-                  >
-                    {companies.length === 0 ? (
-                      <option value="" disabled>Cargando empresas...</option>
+                    {companyId === '' ? (
+                      <option value="AGENCY_ADMIN">AGENCY_ADMIN (Superadministrador)</option>
+                    ) : businessType === 'VENTAS_B2B' ? (
+                      <>
+                        <option value="ACCOUNT_ADMIN">Administrador</option>
+                        <option value="SUPERVISOR_VENTAS">Supervisor de Ventas</option>
+                        <option value="BACKOFFICE_VENTAS">BackOffice de Ventas</option>
+                        <option value="POSTVENTA">Postventa</option>
+                        <option value="ASESOR_VENTAS">Asesor de Ventas</option>
+                      </>
                     ) : (
-                      companies.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))
+                      <>
+                        <option value="ACCOUNT_ADMIN">Administrador</option>
+                        <option value="SUPERVISOR_HUNTING">Supervisor de Hunting</option>
+                        <option value="BACKOFFICE">BackOffice</option>
+                        <option value="HUNTER">Hunter (Campo)</option>
+                      </>
                     )}
                   </select>
                 </div>
               </div>
 
+              {(role === 'HUNTER' || role === 'ASESOR_VENTAS') && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Supervisor Asignado
+                  </label>
+                  <select
+                    value={supervisorId}
+                    onChange={(e) => setSupervisorId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white transition-all"
+                  >
+                    <option value="">Sin Supervisor</option>
+                    {getSupervisorsList().map(s => (
+                      <option key={s.id} value={s.id}>{s.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="w-1/2 border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl text-sm transition-all"
+                  className="w-1/2 border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl text-sm transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
                 >
                   {submitting ? 'Guardando...' : 'Guardar'}
                 </button>

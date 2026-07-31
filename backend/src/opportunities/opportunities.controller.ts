@@ -3,11 +3,12 @@ import { OpportunitiesService } from './opportunities.service';
 import { CreateOpportunityDto } from './dto/create-opportunity.dto';
 import { TransitionStageDto } from './dto/transition-stage.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
 import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
 import { EntityManager } from 'typeorm';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), TenantGuard)
 @UseInterceptors(TransactionAuditInterceptor)
 @Controller('opportunities')
 export class OpportunitiesController {
@@ -31,30 +32,8 @@ export class OpportunitiesController {
     return this.opportunitiesService.createOpportunitiesBulk(req.user, bulkDtos, manager);
   }
 
-  @Get()
-  async findAll(@Request() req: any) {
-    return this.opportunitiesService.findAll(req.user);
-  }
 
-  @Patch(':id')
-  async updateOpportunity(
-    @Param('id') id: string,
-    @Request() req: any,
-    @Body() updateDto: any, // simplification MVP
-    @TransactionManager() manager: EntityManager
-  ) {
-    return this.opportunitiesService.updateOpportunity(id, req.user, updateDto, manager);
-  }
 
-  @Patch(':id/stage')
-  async transitionStage(
-    @Param('id') id: string,
-    @Request() req: any,
-    @Body() transitionStageDto: TransitionStageDto,
-    @TransactionManager() manager: EntityManager
-  ) {
-    return this.opportunitiesService.transitionStage(id, req.user, transitionStageDto, manager);
-  }
 
   @Post(':id/approve')
   async approveOpportunity(

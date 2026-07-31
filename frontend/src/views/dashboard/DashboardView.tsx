@@ -112,8 +112,8 @@ export const DashboardView: React.FC = () => {
         </h1>
       </div>
 
-      {/* ADMIN DASHBOARD */}
-      {role === 'ADMIN' && (
+      {/* ADMIN / ACCOUNT_ADMIN DASHBOARD */}
+      {(role === 'ADMIN' || role === 'ACCOUNT_ADMIN') && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <KpiCard title="Total Oportunidades" value={totalOpps} />
@@ -124,7 +124,7 @@ export const DashboardView: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-96">
-              <h3 className="text-sm font-bold text-gray-700 mb-6 uppercase">Rendimiento por Hunter (HPs)</h3>
+              <h3 className="text-sm font-bold text-gray-700 mb-6 uppercase">Rendimiento por Hunter/Asesor (HPs)</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={hunterRankingData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -187,8 +187,8 @@ export const DashboardView: React.FC = () => {
         </>
       )}
 
-      {/* BACKOFFICE DASHBOARD */}
-      {role === 'BACKOFFICE' && (
+      {/* BACKOFFICE / SUPERVISOR DASHBOARD */}
+      {(role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS' || role === 'POSTVENTA' || role === 'SUPERVISOR_HUNTING' || role === 'SUPERVISOR_VENTAS') && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <KpiCard title="Asignaciones Pendientes" value={boValidacionesAsignacion} subtitle="Pendientes de Revisión" />
@@ -211,11 +211,11 @@ export const DashboardView: React.FC = () => {
         </>
       )}
 
-      {/* HUNTER DASHBOARD */}
-      {role === 'HUNTER' && (
+      {/* HUNTER / ASESOR_VENTAS DASHBOARD */}
+      {(role === 'HUNTER' || role === 'ASESOR_VENTAS') && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KpiCard title="Mis HPs Prospectados" value={totalHps.toLocaleString()} subtitle="Acumulado" />
+            <KpiCard title="Mis HPs / Ventas Prospectadas" value={totalHps.toLocaleString()} subtitle="Acumulado" />
             <KpiCard title="Mis Proyectos Ganados" value={wonOpps} />
             <KpiCard title="Tasa de Éxito Personal" value={`${winRate}%`} />
           </div>

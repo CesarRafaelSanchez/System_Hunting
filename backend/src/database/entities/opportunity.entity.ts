@@ -1,10 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { Company } from './company.entity';
 import { Predio } from './predio.entity';
 import { LeadSource } from './lead-source.entity';
 import { Pipeline } from './pipeline.entity';
 import { PipelineStage } from './pipeline-stage.entity';
 import { User } from './user.entity';
+import { VentaFija } from './venta-fija.entity';
 
 @Entity('opportunities')
 export class Opportunity {
@@ -21,8 +22,8 @@ export class Opportunity {
   @JoinColumn({ name: 'company_id' })
   company: Company;
 
-  @Column({ type: 'uuid', name: 'property_id' })
-  propertyId: string;
+  @Column({ type: 'uuid', name: 'property_id', nullable: true })
+  propertyId: string | null;
 
   @ManyToOne(() => Predio, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'property_id' })
@@ -107,4 +108,7 @@ export class Opportunity {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'partner_supervisor_id' })
   partnerSupervisor: User;
+
+  @OneToOne(() => VentaFija, (ventaFija) => ventaFija.opportunity)
+  ventaFija: VentaFija;
 }

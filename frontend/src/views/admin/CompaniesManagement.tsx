@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchApi } from '../../services/api.client';
-import { Building2, X, Plus } from 'lucide-react';
+import { Building2, X, Plus, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Company {
@@ -9,6 +9,7 @@ interface Company {
   ruc: string;
   slug: string;
   isActive: boolean;
+  tipoNegocio?: 'HUNTING_EDIFICIOS' | 'VENTAS_B2B';
 }
 
 interface User {
@@ -30,9 +31,12 @@ export const CompaniesManagement: React.FC = () => {
 
   // Modal State
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [name, setName] = useState('');
   const [ruc, setRuc] = useState('');
   const [slug, setSlug] = useState('');
+  const [tipoNegocio, setTipoNegocio] = useState<'HUNTING_EDIFICIOS' | 'VENTAS_B2B'>('HUNTING_EDIFICIOS');
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
 
   const loadCompanies = async () => {
@@ -65,22 +69,48 @@ export const CompaniesManagement: React.FC = () => {
     }
   };
 
+  const handleOpenCreate = () => {
+    setEditingCompany(null);
+    setName('');
+    setRuc('');
+    setSlug('');
+    setTipoNegocio('HUNTING_EDIFICIOS');
+    setIsActive(true);
+    setIsOpen(true);
+  };
+
+  const handleOpenEdit = (e: React.MouseEvent, company: Company) => {
+    e.stopPropagation();
+    setEditingCompany(company);
+    setName(company.name);
+    setRuc(company.ruc);
+    setSlug(company.slug);
+    setTipoNegocio(company.tipoNegocio || 'HUNTING_EDIFICIOS');
+    setIsActive(company.isActive);
+    setIsOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await fetchApi('/companies/admin', {
-        method: 'POST',
-        body: JSON.stringify({ name, ruc, slug }),
-      });
-      toast.success('Empresa creada correctamente');
+      if (editingCompany) {
+        await fetchApi(`/companies/${editingCompany.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name, ruc, slug, tipoNegocio, isActive }),
+        });
+        toast.success('Empresa actualizada correctamente');
+      } else {
+        await fetchApi('/companies/admin', {
+          method: 'POST',
+          body: JSON.stringify({ name, ruc, slug, tipoNegocio }),
+        });
+        toast.success('Empresa creada correctamente');
+      }
       setIsOpen(false);
-      setName('');
-      setRuc('');
-      setSlug('');
       loadCompanies();
     } catch (error: any) {
-      toast.error(error.message || 'Error al crear la empresa');
+      toast.error(error.message || `Error al ${editingCompany ? 'actualizar' : 'crear'} la empresa`);
     } finally {
       setSubmitting(false);
     }
@@ -97,7 +127,7 @@ export const CompaniesManagement: React.FC = () => {
               <p className="text-sm text-gray-500 mt-1">Administra las empresas registradas en el sistema.</p>
             </div>
             <button
-              onClick={() => setIsOpen(true)}
+              onClick={handleOpenCreate}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
             >
               <Plus size={18} />
@@ -114,6 +144,7 @@ export const CompaniesManagement: React.FC = () => {
                     <th className="px-6 py-4 font-semibold tracking-wider">RUC</th>
                     <th className="px-6 py-4 font-semibold tracking-wider">Slug</th>
                     <th className="px-6 py-4 font-semibold tracking-wider text-center">Estado</th>
+                    <th className="px-6 py-4 font-semibold tracking-wider text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -145,7 +176,18 @@ export const CompaniesManagement: React.FC = () => {
                           <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-mono">{company.slug}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200/50">Activa</span>
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${company.isActive ? 'bg-green-50 text-green-700 border-green-200/50' : 'bg-red-50 text-red-700 border-red-200/50'}`}>
+                            {company.isActive ? 'Activa' : 'Inactiva'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={(e) => handleOpenEdit(e, company)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors inline-flex"
+                            title="Editar Empresa"
+                          >
+                            <Edit2 size={16} />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -198,7 +240,7 @@ export const CompaniesManagement: React.FC = () => {
                       <span className="font-medium text-gray-900">{user.fullName}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                         user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                        user.role === 'BACKOFFICE' ? 'bg-blue-100 text-blue-700' :
+                        user.role === 'BACKOFFICE' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA' ? 'bg-blue-100 text-blue-700' :
                         'bg-orange-100 text-orange-700'
                       }`}>
                         {user.role}
@@ -218,7 +260,7 @@ export const CompaniesManagement: React.FC = () => {
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Agregar Nueva Empresa</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{editingCompany ? 'Editar Empresa' : 'Agregar Nueva Empresa'}</h3>
               <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X size={20} />
               </button>
@@ -261,6 +303,31 @@ export const CompaniesManagement: React.FC = () => {
                     placeholder="novacore"
                   />
                 </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Negocio</label>
+                  <select
+                    value={tipoNegocio}
+                    onChange={(e) => setTipoNegocio(e.target.value as 'HUNTING_EDIFICIOS' | 'VENTAS_B2B')}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-colors text-sm bg-white"
+                  >
+                    <option value="HUNTING_EDIFICIOS">Hunting Edificios</option>
+                    <option value="VENTAS_B2B">Ventas B2B (FS)</option>
+                  </select>
+                </div>
+
+                {editingCompany && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="isActive" className="text-sm font-medium text-gray-700">Empresa Activa</label>
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 flex justify-end gap-3">
@@ -276,7 +343,7 @@ export const CompaniesManagement: React.FC = () => {
                   disabled={submitting}
                   className="px-6 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
                 >
-                  {submitting ? 'Creando...' : 'Crear Empresa'}
+                  {submitting ? 'Guardando...' : editingCompany ? 'Guardar Cambios' : 'Crear Empresa'}
                 </button>
               </div>
             </form>

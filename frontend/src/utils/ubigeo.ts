@@ -1,0 +1,104 @@
+export interface UbigeoData {
+  [departamento: string]: {
+    [provincia: string]: string[];
+  };
+}
+
+export const UBIGEO_PERU: UbigeoData = {
+  "LIMA": {
+    "LIMA": [
+      "ATE",
+      "BARRANCO",
+      "BREÑA",
+      "CARABAYLLO",
+      "CHACLACAYO",
+      "CHORRILLOS",
+      "CIENEGUILLA",
+      "COMAS",
+      "EL AGUSTINO",
+      "INDEPENDENCIA",
+      "JESUS MARIA",
+      "LA MOLINA",
+      "LA VICTORIA",
+      "LIMA",
+      "LINCE",
+      "LOS OLIVOS",
+      "LURIGANCHO",
+      "LURIN",
+      "MAGDALENA DEL MAR",
+      "MIRAFLORES",
+      "PACHACAMAC",
+      "PUCUSANA",
+      "PUEBLO LIBRE",
+      "PUENTE PIEDRA",
+      "PUNTA HERMOSA",
+      "PUNTA NEGRA",
+      "RIMAC",
+      "SAN BARTOLO",
+      "SAN BORJA",
+      "SAN ISIDRO",
+      "SAN JUAN DE LURIGANCHO",
+      "SAN JUAN DE MIRAFLORES",
+      "SAN MARTIN DE PORRES",
+      "SAN MIGUEL",
+      "SANTA ANITA",
+      "SANTA MARIA DEL MAR",
+      "SANTA ROSA",
+      "SANTIAGO DE SURCO",
+      "SURQUILLO",
+      "VILLA EL SALVADOR",
+      "VILLA MARIA DEL TRIUNFO"
+    ],
+    "CAÑETE": ["SAN VICENTE DE CAÑETE", "ASIA", "MALA", "CHILCA", "IMPERIAL"],
+    "HUAURA": ["HUACHO", "HUALMAY", "SAYAN"],
+    "HUARAL": ["HUARAL", "CHANCAY"]
+  },
+  "PIURA": {
+    "PIURA": ["PIURA", "CASTILLA", "CATACAOS", "TAMBOGRANDE", "VEINTISEIS DE OCTUBRE"],
+    "SULLANA": ["SULLANA", "BELLAVISTA", "MARCAVELICA", "QUERECOTILLO"],
+    "TALARA": ["PARIÑAS", "EL ALTO", "LOBITOS", "MANCORA"],
+    "PAITA": ["PAITA", "COLAN"]
+  },
+  "LA LIBERTAD": {
+    "TRUJILLO": ["TRUJILLO", "EL PORVENIR", "FLORENCIA DE MORA", "LA ESPERANZA", "LAREDO", "MOCHE", "VICTOR LARCO HERRERA", "HUANCHACO"],
+    "CHEPEN": ["CHEPEN"],
+    "PACASMAYO": ["SAN PEDRO DE LLOC", "PACASMAYO", "GUADALUPE"]
+  },
+  "LAMBAYEQUE": {
+    "CHICLAYO": ["CHICLAYO", "JOSE LEONARDO ORTIZ", "LA VICTORIA", "PIMENTEL", "REQUE"],
+    "LAMBAYEQUE": ["LAMBAYEQUE", "MOTUPE", "OLMOS"],
+    "FERREÑAFE": ["FERREÑAFE"]
+  },
+  "AREQUIPA": {
+    "AREQUIPA": ["AREQUIPA", "ALTO SELVA ALEGRE", "CAYMA", "CERRO COLORADO", "JACOBO HUNTER", "JOSE LUIS BUSTAMANTE Y RIVERO", "MARIANO MELGAR", "MIRAFLORES", "PAUCARPATA", "SABANDIA", "SACHACA", "SOCABAYA", "YANAHUARA"],
+    "CAMANA": ["CAMANA"],
+    "ISLAY": ["MOLLENDO"]
+  },
+  "ANCASH": {
+    "SANTA": ["CHIMBOTE", "NUEVO CHIMBOTE", "COISHCO", "NEPEÑA"],
+    "HUARAZ": ["HUARAZ", "INDEPENDENCIA"]
+  },
+  "CUSCO": {
+    "CUSCO": ["CUSCO", "JERONIMO", "SAN SEBASTIAN", "SANTIAGO", "WANCHAQ"],
+    "URUBAMBA": ["URUBAMBA", "MACHUPICCHU"],
+    "CALCA": ["CALCA"]
+  },
+  "PUNO": {
+    "SAN ROMAN": ["JULIACA", "CARACOTO"],
+    "PUNO": ["PUNO"]
+  },
+  "TACNA": {
+    "TACNA": ["TACNA", "CRL. GREG. ALBARRACIN LANCHIPA", "ALTO DE LA ALIANZA", "POCOLLAY"]
+  },
+  "CAJAMARCA": {
+    "CAJAMARCA": ["CAJAMARCA", "BAÑOS DEL INCA"],
+    "JAEN": ["JAEN"]
+  },
+  "LORETO": {
+    "MAYNAS": ["IQUITOS", "PUNCHANA", "BELEN", "SAN JUAN BAUTISTA"],
+    "ALTO AMAZONAS": ["YURIMAGUAS"]
+  },
+  "CALLAO": {
+    "CALLAO": ["CALLAO", "BELLAVISTA", "CARMEN DE LA LEGUA", "LA PERLA", "LA PUNTA", "VENTANILLA", "MI PERÚ"]
+  }
+};
