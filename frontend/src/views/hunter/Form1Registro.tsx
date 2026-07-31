@@ -14,7 +14,6 @@ export const Form1Registro: React.FC = () => {
   const [hunters, setHunters] = useState<any[]>([]);
   const isPublic = !user;
 
-  
   const [formData, setFormData] = useState({
     ejecutivo: user?.id || '',
     nombreProyecto: '',

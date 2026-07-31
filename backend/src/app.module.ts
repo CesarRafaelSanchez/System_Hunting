@@ -17,6 +17,8 @@ import { UsersModule } from './users/users.module';
 import { CompaniesModule } from './companies/companies.module';
 import { PipelinesModule } from './pipelines/pipelines.module';
 import { PublicModule } from './public/public.module';
+import { VentasModule } from './ventas/ventas.module';
+import { HuntingModule } from './hunting/hunting.module';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { PublicModule } from './public/public.module';
       password: process.env.DB_PASSWORD || 'postgres',
       database: process.env.DB_NAME || 'hunting_crm',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // ¡Nunca usar synchronize en producción! Usar migraciones.l esquema
+      synchronize: process.env.NODE_ENV !== 'production', // ¡Nunca usar synchronize en producción!
     }),
     BullModule.forRoot({
       connection: {
@@ -53,6 +55,8 @@ import { PublicModule } from './public/public.module';
     CompaniesModule,
     PipelinesModule,
     PublicModule,
+    VentasModule,
+    HuntingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

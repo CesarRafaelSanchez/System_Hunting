@@ -10,78 +10,15 @@ import { CreatePipelineDto, UpdatePipelineDto, PipelineStageDto } from './dto/cr
 export class PipelinesService {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-  async getActivePipeline(manager?: EntityManager) {
+  async getActivePipeline(companyId: string, manager?: EntityManager) {
     const mgr = manager || this.dataSource.manager;
     
-    let pipeline = await mgr.findOne(Pipeline, {
-      where: { isActive: true }
+    const pipeline = await mgr.findOne(Pipeline, {
+      where: { isActive: true, companyId }
     });
 
     if (!pipeline) {
-      // Crear pipeline por defecto automáticamente
-      const defaultPipeline = mgr.create(Pipeline, {
-        name: 'Pipeline Comercial Principal',
-        code: 'PCP',
-        description: 'Pipeline comercial por defecto autogenerado por el sistema.',
-        isActive: true
-      });
-      const savedPipeline = await mgr.save(defaultPipeline);
-
-      const OFFICIAL_STAGES = [
-        'Edificio Prospectado',
-        'Prospecto Aceptado / Trabajable',
-        'Prospecto Rechazado / No Trabajable',
-        'Pendiente Envío de Formulario de Asignación',
-        'Formulario de Asignación/Reasignación Completado',
-        'Validación Back Office',
-        'Solicitud de Asignación/Reasignación Enviada a WIN',
-        'Esperando Respuesta WIN',
-        'Asignación Aprobada',
-        'Asignación Rechazada',
-        'Pendiente Reasignación',
-        'Pendiente Envío de Formulario Ficha de Datos',
-        'Formulario de Ficha de Datos Completado',
-        'Validación Back Office 2',
-        'Ficha de Datos Enviada a WIN',
-        'Pendiente Inicio de Habilitación (construcción)',
-        'En Habilitación Técnica',
-        'Standby por Accesos',
-        'Habilitación Completa',
-        'Hunting Perdido/ No Recuperable'
-      ];
-
-      const stages = OFFICIAL_STAGES.map((stageName, i) => {
-        const position = i + 1;
-        let stageType = 'STANDARD';
-        let isWon = false;
-        let isLost = false;
-        let isFinal = false;
-
-        if (stageName === 'Habilitación Completa') {
-          stageType = 'WON';
-          isWon = true;
-          isFinal = true;
-        } else if (stageName === 'Hunting Perdido/ No Recuperable' || stageName === 'Prospecto Rechazado / No Trabajable') {
-          stageType = 'LOST';
-          isLost = true;
-          isFinal = true;
-        }
-
-        return mgr.create(PipelineStage, {
-          pipelineId: savedPipeline.id,
-          name: stageName,
-          code: `S${position}`,
-          position,
-          isInitial: position === 1,
-          isWon,
-          isLost,
-          isFinal,
-          stageType
-        });
-      });
-
-      await mgr.save(stages);
-      pipeline = savedPipeline;
+      throw new NotFoundException('No se encontró un pipeline activo para esta empresa.');
     }
 
     const stages = await mgr.find(PipelineStage, {
@@ -111,17 +48,18 @@ export class PipelinesService {
     }
   }
 
-  async createPipeline(dto: CreatePipelineDto, manager: EntityManager) {
+  async createPipeline(companyId: string, dto: CreatePipelineDto, manager: EntityManager) {
     this.validateStages(dto.stages);
 
-    // Desactivar cualquier pipeline activo existente
-    await manager.update(Pipeline, { isActive: true }, { isActive: false });
+    // Desactivar cualquier pipeline activo existente para esta empresa
+    await manager.update(Pipeline, { isActive: true, companyId }, { isActive: false });
 
     // Crear nuevo pipeline
     const pipeline = manager.create(Pipeline, {
       name: dto.name,
       code: dto.code,
       description: dto.description,
+      companyId,
       isActive: true
     });
     const savedPipeline = await manager.save(pipeline);
@@ -143,13 +81,13 @@ export class PipelinesService {
 
     await manager.save(stages);
 
-    return this.getActivePipeline(manager);
+    return this.getActivePipeline(companyId, manager);
   }
 
-  async updatePipeline(id: string, dto: UpdatePipelineDto, manager: EntityManager) {
+  async updatePipeline(id: string, companyId: string, dto: UpdatePipelineDto, manager: EntityManager) {
     this.validateStages(dto.stages);
 
-    const pipeline = await manager.findOne(Pipeline, { where: { id } });
+    const pipeline = await manager.findOne(Pipeline, { where: { id, companyId } });
     if (!pipeline) {
       throw new NotFoundException('Pipeline no encontrado');
     }
@@ -214,6 +152,6 @@ export class PipelinesService {
 
     await manager.save(updatedStages);
 
-    return this.getActivePipeline(manager);
+    return this.getActivePipeline(companyId, manager);
   }
 }

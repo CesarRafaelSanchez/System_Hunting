@@ -19,16 +19,22 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   }
 
   let token = null;
+  let tenantId = null;
   try {
     const authStorage = localStorage.getItem('auth-storage');
     if (authStorage) {
       const parsed = JSON.parse(authStorage);
       token = parsed.state?.token;
+      tenantId = parsed.state?.activeWorkspace?.id;
     }
   } catch (e) {}
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  if (tenantId) {
+    headers.set('x-tenant-id', tenantId);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {

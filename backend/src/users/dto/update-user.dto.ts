@@ -15,16 +15,24 @@ export class UpdateUserDto {
   @Length(6, 50)
   password?: string;
 
-  @IsEnum(['ADMIN', 'BACKOFFICE', 'HUNTER'])
+  @IsEnum(['ADMIN', 'BACKOFFICE', 'HUNTER', 'SUPERVISOR_HUNTING', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'ASESOR_VENTAS', 'POSTVENTA', 'ACCOUNT_ADMIN', 'AGENCY_ADMIN'])
   @IsNotEmpty()
   role: string;
 
   @IsUUID()
-  @IsNotEmpty()
-  companyId: string;
+  @IsOptional()
+  companyId?: string;
+
+  @IsEnum(['AGENCY_ADMIN'])
+  @IsOptional()
+  globalRole?: string;
 
   @IsString()
   @IsOptional()
   @Length(6, 30)
   phone?: string;
+
+  @IsUUID()
+  @IsOptional()
+  supervisorId?: string;
 }

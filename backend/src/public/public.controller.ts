@@ -1,42 +1,37 @@
-import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseInterceptors, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, NotFoundException, BadRequestException, UseInterceptors, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { OpportunitiesService } from '../opportunities/opportunities.service';
 import { UsersService } from '../users/users.service';
-import { CreateOpportunityDto } from '../opportunities/dto/create-opportunity.dto';
-import { EntityManager } from 'typeorm';
-import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
-import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
-
 import { PrediosService } from '../predios/predios.service';
-import { CreateRegistroInicialDto } from '../predios/dto/create-registro-inicial.dto';
-import { BadRequestException } from '@nestjs/common';
+import { HuntingService } from '../hunting/services/hunting.service';
+import { PipelinesService } from '../pipelines/pipelines.service';
+import { TransactionAuditInterceptor } from '../core/interceptors/transaction-audit.interceptor';
+import { TransactionManager } from '../core/decorators/transaction-manager.decorator';
+import { EntityManager } from 'typeorm';
 
 @UseGuards(ThrottlerGuard)
 @Controller('public')
 export class PublicController {
   constructor(
-    private readonly opportunitiesService: OpportunitiesService,
     private readonly usersService: UsersService,
-    private readonly prediosService: PrediosService
+    private readonly prediosService: PrediosService,
+    private readonly huntingService: HuntingService,
+    private readonly pipelinesService: PipelinesService
   ) {}
 
   @Get('hunters')
   async getHunters() {
-    const allUsers = await this.usersService.findAll();
-    const hunters = allUsers.filter(u => u.role === 'HUNTER' && u.isActive);
-    return hunters.map(h => ({
-      id: h.id,
-      fullName: h.fullName,
-      email: h.email
+    const users = await this.usersService.findAll({ globalRole: 'AGENCY_ADMIN' }); // Mock para saltar tenancy
+    return users.filter(u => u.role === 'HUNTER' || u.role === 'REFERRAL').map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      role: u.role
     }));
   }
 
   @Get('supervisors')
   async getSupervisors() {
-    const allUsers = await this.usersService.findAll();
-    // Usually supervisors can be ADMIN, BACKOFFICE, or specifically SUPERVISOR. We return all for the frontend to list them
-    const supervisors = allUsers.filter(u => u.isActive && ['ADMIN', 'BACKOFFICE', 'SUPERVISOR'].includes(u.role));
-    return supervisors.map(s => ({
+    const users = await this.usersService.findAll({ globalRole: 'AGENCY_ADMIN' });
+    return users.filter(u => u.role === 'BACKOFFICE').map(s => ({
       id: s.id,
       fullName: s.fullName,
       role: s.role
@@ -46,7 +41,7 @@ export class PublicController {
   @Get('opportunities/:id')
   async getOpportunityPublic(@Param('id') id: string, @TransactionManager() manager: EntityManager) {
     // Admin user mock just to bypass companyId filter
-    const opps = await this.opportunitiesService.findAll({ role: 'ADMIN' });
+    const opps = await this.huntingService.findAllHunting({ globalRole: 'AGENCY_ADMIN' });
     const opp = opps.find(o => o.id === id);
     if (!opp) throw new NotFoundException('Oportunidad no encontrada');
     return opp;
@@ -96,6 +91,6 @@ export class PublicController {
     @Body() dto: any,
     @TransactionManager() manager: EntityManager
   ) {
-    return this.opportunitiesService.updateOpportunity(id, { role: 'ADMIN' }, dto, manager);
+    return this.huntingService.updateHuntingOpportunity(id, { globalRole: 'AGENCY_ADMIN' }, dto, manager);
   }
 }

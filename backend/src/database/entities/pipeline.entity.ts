@@ -17,6 +17,9 @@ export class Pipeline {
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
 
+  @Column({ type: 'uuid', name: 'company_id', nullable: true })
+  companyId: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 

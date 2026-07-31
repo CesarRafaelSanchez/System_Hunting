@@ -28,11 +28,14 @@ export class User {
   @Column({ length: 50, default: 'HUNTER' })
   role: string;
 
+  @Column({ type: 'varchar', length: 50, name: 'global_role', nullable: true, default: null })
+  globalRole: string | null; // 'AGENCY_ADMIN' | null
+
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
 
   @Column({ type: 'uuid', name: 'supervisor_id', nullable: true })
-  supervisorId: string;
+  supervisorId: string | null;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'supervisor_id' })

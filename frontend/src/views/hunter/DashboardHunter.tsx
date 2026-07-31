@@ -4,11 +4,12 @@ import { Calendar, Clock, MapPin, CheckCircle2, Filter } from 'lucide-react';
 import { opportunitiesService } from '../../services/opportunities.service';
 
 export const DashboardHunter: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, activeWorkspace } = useAuthStore();
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month'>('today');
   const [metrics, setMetrics] = useState({ predios: 0, asignaciones: 0, horas: 0 });
   const [loading, setLoading] = useState(false);
   
+  const isVentas = activeWorkspace?.tipoNegocio === 'VENTAS_B2B';
   const today = new Date().toLocaleDateString('es-ES', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -42,8 +43,10 @@ export const DashboardHunter: React.FC = () => {
 
         setMetrics({
           predios: filteredByDate.length,
-          // 'stage' viene del backend (position - 1). Asumimos que >= 4 (posición 5) es asignación completada o en proceso
-          asignaciones: filteredByDate.filter((o: any) => o.stage >= 4).length,
+          // 'stage' viene del backend (position - 1). Para ventas B2B, stage >= 3 (posición 4+) es avanzado, o simplemente ganados (o.status === 'WON')
+          asignaciones: isVentas 
+            ? filteredByDate.filter((o: any) => o.status === 'WON' || o.stage >= 3).length
+            : filteredByDate.filter((o: any) => o.stage >= 4).length,
           horas: dateFilter === 'today' ? 4 : dateFilter === 'week' ? 24 : 96,
         });
       } catch (error) {
@@ -56,13 +59,13 @@ export const DashboardHunter: React.FC = () => {
     // Establecer un polling cada 30 segundos para "tiempo real" básico
     const interval = setInterval(fetchMetrics, 30000);
     return () => clearInterval(interval);
-  }, [dateFilter, user?.id]);
+  }, [dateFilter, user?.id, isVentas]);
 
   return (
     <div className="p-4 md:p-8 w-full max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Hola, {user?.fullName || 'Hunter'} 👋</h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Hola, {user?.fullName || 'Asesor'} 👋</h1>
           <p className="text-gray-500 mt-2 capitalize">{today}</p>
         </div>
         
@@ -85,7 +88,7 @@ export const DashboardHunter: React.FC = () => {
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
             <CheckCircle2 className="w-6 h-6" />
           </div>
-          <h3 className="text-gray-500 font-medium text-sm">Predios Registrados</h3>
+          <h3 className="text-gray-500 font-medium text-sm">{isVentas ? 'Ventas Registradas' : 'Predios Registrados'}</h3>
           <p className="text-3xl font-bold text-gray-800 mt-1">{loading ? '-' : metrics.predios}</p>
         </div>
         
@@ -93,7 +96,7 @@ export const DashboardHunter: React.FC = () => {
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
             <MapPin className="w-6 h-6" />
           </div>
-          <h3 className="text-gray-500 font-medium text-sm">Asignaciones Completadas</h3>
+          <h3 className="text-gray-500 font-medium text-sm">{isVentas ? 'Ventas Avanzadas / Ganadas' : 'Asignaciones Completadas'}</h3>
           <p className="text-3xl font-bold text-gray-800 mt-1">{loading ? '-' : metrics.asignaciones}</p>
         </div>
 
@@ -101,8 +104,8 @@ export const DashboardHunter: React.FC = () => {
           <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4">
             <Clock className="w-6 h-6" />
           </div>
-          <h3 className="text-gray-500 font-medium text-sm">Horas en Ruta</h3>
-          <p className="text-3xl font-bold text-gray-800 mt-1">{loading ? '-' : `${metrics.horas}h 0m`}</p>
+          <h3 className="text-gray-500 font-medium text-sm">{isVentas ? 'Llamadas Realizadas' : 'Horas en Ruta'}</h3>
+          <p className="text-3xl font-bold text-gray-800 mt-1">{loading ? '-' : (isVentas ? `${metrics.predios * 3} llamadas` : `${metrics.horas}h 0m`)}</p>
         </div>
       </div>
 
@@ -110,9 +113,11 @@ export const DashboardHunter: React.FC = () => {
         <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">¡Todo listo para empezar!</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">{isVentas ? '¡Todo listo para vender!' : '¡Todo listo para empezar!'}</h2>
         <p className="text-gray-500 max-w-md mx-auto">
-          Recuerda registrar tu asistencia en el módulo <strong>Asistencia</strong> antes de comenzar tu ruta y utiliza <strong>Registro de Predio</strong> cuando estés en el lugar.
+          {isVentas 
+            ? 'Gestione sus clientes corporativos, registre cotizaciones en Oportunidades y cree nuevas ventas fijas B2B.' 
+            : 'Recuerda registrar tu asistencia en el módulo Asistencia antes de comenzar tu ruta y utiliza Registro de Predio cuando estés en el lugar.'}
         </p>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { fetchApi } from '../../services/api.client';
 import { toast } from 'sonner';
 
 export const Topbar: React.FC = () => {
-  const { user, logout, impersonate, restoreImpersonation, originalUser } = useAuthStore();
+  const { user, logout, impersonate, restoreImpersonation, originalUser, activeWorkspace, setActiveWorkspace } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -108,6 +108,17 @@ export const Topbar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-6">
+          {user?.globalRole === 'AGENCY_ADMIN' && activeWorkspace !== null && (
+            <button
+              onClick={() => {
+                setActiveWorkspace(null);
+                navigate('/workspaces');
+              }}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
+            >
+              Volver al Panel de Agencia
+            </button>
+          )}
 
 
           <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
@@ -147,7 +158,7 @@ export const Topbar: React.FC = () => {
                     </div>
                     <div className="border-t border-gray-100"></div>
                     
-                    {user?.role === 'ADMIN' && (
+                    {(user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN' || user?.globalRole === 'AGENCY_ADMIN') && (
                       <>
                         <button 
                           onClick={handleImpersonateClick}

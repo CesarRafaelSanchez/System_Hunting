@@ -48,7 +48,7 @@ export const RegistrarPredio: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-800">Registrar Nuevo Predio</h2>
             <button 
               onClick={() => { setShowForm(false); fetchPredios(); }}
-              className="text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors"
+              className="text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors cursor-pointer"
             >
               Volver a la lista
             </button>
@@ -68,7 +68,7 @@ export const RegistrarPredio: React.FC = () => {
             </div>
             <button 
               onClick={() => setShowForm(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm w-full md:w-auto justify-center"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm w-full md:w-auto justify-center cursor-pointer"
             >
               <Plus className="w-5 h-5" />
               Registrar nuevo Predio

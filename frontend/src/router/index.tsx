@@ -1,8 +1,10 @@
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuthStore } from '../store/useAuthStore';
 import { LoginView } from '../views/auth/LoginView';
+import { WorkspaceSwitcher } from '../views/auth/WorkspaceSwitcher';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Suspense } from 'react';
 
@@ -13,8 +15,20 @@ const AsignacionPredio = React.lazy(() => import('../views/hunter/AsignacionPred
 const FichaDatosPredio = React.lazy(() => import('../views/hunter/FichaDatosPredio').then(m => ({ default: m.FichaDatosPredio })));
 const Form2Asignacion = React.lazy(() => import('../views/hunter/Form2Asignacion').then(m => ({ default: m.Form2Asignacion })));
 const Form3FichaDatos = React.lazy(() => import('../views/hunter/Form3FichaDatos').then(m => ({ default: m.Form3FichaDatos })));
+const RegistrarVenta = React.lazy(() => import('../views/sales/RegistrarVenta').then(m => ({ default: m.RegistrarVenta })));
+const DashboardAsesor = React.lazy(() => import('../views/sales/DashboardAsesor').then(m => ({ default: m.DashboardAsesor })));
+const DashboardSupervisor = React.lazy(() => import('../views/sales/DashboardSupervisor').then(m => ({ default: m.DashboardSupervisor })));
 
 import { useParams } from 'react-router-dom';
+
+const SalesDashboardRoute = () => {
+  const { user } = useAuthStore();
+  return (
+    <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando dashboard...</div>}>
+      {user?.role === 'SUPERVISOR_VENTAS' ? <DashboardSupervisor /> : <DashboardAsesor />}
+    </Suspense>
+  );
+};
 
 const PublicForm2Route = () => {
   const { opportunityId } = useParams<{ opportunityId: string }>();
@@ -39,71 +53,105 @@ const PublicForm3Route = () => {
 };
 
 const KanbanBoard = React.lazy(() => import('../views/backoffice/KanbanBoard').then(m => ({ default: m.KanbanBoard })));
+const HuntingKanbanBoard = React.lazy(() => import('../views/opportunities/hunting/HuntingKanbanBoard').then(m => ({ default: m.KanbanBoard })));
+const B2BKanbanBoard = React.lazy(() => import('../views/opportunities/b2b/B2BKanbanBoard').then(m => ({ default: m.KanbanBoard })));
 const UserManagement = React.lazy(() => import('../views/admin/UserManagement').then(m => ({ default: m.UserManagement })));
 const CompaniesManagement = React.lazy(() => import('../views/admin/CompaniesManagement').then(m => ({ default: m.CompaniesManagement })));
 const DashboardView = React.lazy(() => import('../views/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
 const ValidacionExpedientes = React.lazy(() => import('../views/backoffice/ValidacionExpedientes').then(m => ({ default: m.ValidacionExpedientes })));
 import { SyncManager } from '../components/SyncManager';
 const CompanySetupView = React.lazy(() => import('../views/auth/CompanySetupView').then(m => ({ default: m.CompanySetupView })));
+const AgencyDashboard = React.lazy(() => import('../views/admin/AgencyDashboard').then(m => ({ default: m.AgencyDashboard })));
 
 // --- GUARDS DE RUTAS ---
 
 import { Outlet } from 'react-router-dom';
-const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: string[] }) => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+const ProtectedRoute = ({ children, allowedRoles, bypassWorkspaceCheck }: { children?: React.ReactNode, allowedRoles?: string[], bypassWorkspaceCheck?: boolean }) => {
+  const { isAuthenticated, user, activeWorkspace, logout } = useAuthStore();
 
   if (!isAuthenticated || !user || !user.role) {
     if (isAuthenticated) logout(); // Limpiar estado corrupto
     return <Navigate to="/login" replace />;
   }
 
-  // Si no tiene empresa asociada, redirigir obligatoriamente al onboarding
-  if (!user.companyId) {
+  // Si no tiene empresa asociada y no es AGENCY_ADMIN, redirigir obligatoriamente al onboarding
+  if (!user.companyId && !activeWorkspace && user.globalRole !== 'AGENCY_ADMIN') {
     return <Navigate to="/setup-company" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Si no tiene el rol adecuado, lo devolvemos a su panel correspondiente
-    if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
-    if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
-    if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
-    // Fallback de seguridad
-    logout();
-    return <Navigate to="/login" replace />;
+  // Si no ha seleccionado un workspace y no se permite bypass
+  if (!activeWorkspace && !bypassWorkspaceCheck && user.globalRole !== 'AGENCY_ADMIN') {
+    return <Navigate to="/workspaces" replace />;
+  }
+
+  if (allowedRoles) {
+    const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
+    const isLocalAdmin = user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN';
+
+    // Normalizar roles permitidos para los roles de Ventas
+    const extendedAllowedRoles = [...allowedRoles];
+    if (allowedRoles.includes('HUNTER')) extendedAllowedRoles.push('ASESOR_VENTAS');
+    if (allowedRoles.includes('BACKOFFICE')) {
+      extendedAllowedRoles.push('SUPERVISOR_HUNTING');
+      extendedAllowedRoles.push('SUPERVISOR_VENTAS');
+      extendedAllowedRoles.push('ACCOUNT_ADMIN');
+      extendedAllowedRoles.push('BACKOFFICE_VENTAS');
+      extendedAllowedRoles.push('POSTVENTA');
+    }
+    if (allowedRoles.includes('ADMIN')) {
+      extendedAllowedRoles.push('ACCOUNT_ADMIN');
+      extendedAllowedRoles.push('AGENCY_ADMIN');
+    }
+
+    if (!extendedAllowedRoles.includes(user.role) && !isAgencyAdmin) {
+      if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
+      if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
+      if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
+      if (isLocalAdmin) return <Navigate to="/admin" replace />;
+      logout();
+      return <Navigate to="/login" replace />;
+    }
   }
 
   return children ? <>{children}</> : <Outlet />;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, activeWorkspace } = useAuthStore();
   
   if (isAuthenticated && user && user.role) {
-    if (!user.companyId) {
+    const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
+    if (!user.companyId && !activeWorkspace && !isAgencyAdmin) {
       return <Navigate to="/setup-company" replace />;
     }
+    if (!activeWorkspace && !isAgencyAdmin) {
+      return <Navigate to="/workspaces" replace />;
+    }
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
-    if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
-    if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
-    // Si el rol es desconocido, limpiamos
-    logout();
+    if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
+    if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
+    if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN') return <Navigate to="/admin" replace />;
+    
+    if (isAgencyAdmin && !activeWorkspace) {
+      return <Navigate to="/workspaces" replace />;
+    }
   }
   
   return <>{children}</>;
 };
 
 const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, activeWorkspace, logout } = useAuthStore();
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si el usuario ya tiene una empresa, redirigir al CRM normal
-  if (user.companyId) {
+  if (user.companyId || activeWorkspace || user.globalRole === 'AGENCY_ADMIN') {
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
-    if (user.role === 'BACKOFFICE') return <Navigate to="/backoffice" replace />;
-    if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
+    if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
+    if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
+    if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN' || user.globalRole === 'AGENCY_ADMIN') return <Navigate to="/admin" replace />;
     logout();
     return <Navigate to="/login" replace />;
   }
@@ -124,6 +172,7 @@ export const AppRouter = () => {
     <BrowserRouter>
       <Toaster position="top-right" richColors />
       <SyncManager />
+      <ErrorBoundary>
       <Routes>
         {/* ROOT REDIRECT */}
         <Route path="/" element={
@@ -137,6 +186,12 @@ export const AppRouter = () => {
             <LoginView />
           </PublicRoute>
         } />
+        <Route path="/workspaces" element={
+          <ProtectedRoute bypassWorkspaceCheck={true}>
+            <WorkspaceSwitcher />
+          </ProtectedRoute>
+        } />
+
 
         <Route path="/public/registro-predio" element={
           <div className="p-4 flex justify-center w-full min-h-screen bg-gray-50">
@@ -189,7 +244,7 @@ export const AppRouter = () => {
             } />
             <Route path="/hunter/oportunidades" element={
               <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
-                <KanbanBoard />
+                <HuntingKanbanBoard />
               </Suspense>
             } />
             <Route path="/hunter/oportunidades/asignacion" element={
@@ -202,6 +257,20 @@ export const AppRouter = () => {
                 <FichaDatosPredio />
               </Suspense>
             } />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA', 'ACCOUNT_ADMIN', 'HUNTER']} />}>
+            <Route path="/sales/oportunidades/nueva" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <RegistrarVenta />
+              </Suspense>
+            } />
+            <Route path="/sales/oportunidades" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+                <B2BKanbanBoard />
+              </Suspense>
+            } />
+            <Route path="/sales/dashboard" element={<SalesDashboardRoute />} />
           </Route>
           
           <Route element={<ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']} />}>
@@ -239,11 +308,17 @@ export const AppRouter = () => {
                 <CompaniesManagement />
               </Suspense>
             } />
+            <Route path="/agency/dashboard" element={
+              <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando consola...</div>}>
+                <AgencyDashboard />
+              </Suspense>
+            } />
           </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 };

@@ -31,6 +31,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
     cursor: isDragDisabled ? 'pointer' : 'grab'
   };
 
+  const isB2B = !card.propertyId || card.company?.tipoNegocio === 'VENTAS_B2B';
   const p = card.property || {};
   const districtName = typeof p.distrito === 'string' ? p.distrito : p.distrito?.nombre || '-';
 
@@ -50,7 +51,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
           </span>
           <div className="flex items-center gap-1 mt-0.5">
             <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[150px]">
-              {card.canalHunting || 'FUTURA'}
+              {isB2B ? `Servicio: ${p.tipoTecnologia || ''} / ${p.tipoPlay || ''}` : (card.canalHunting || 'FUTURA')}
             </span>
           </div>
         </div>
@@ -77,7 +78,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
               }`}>
                 {companiesList?.find((c: any) => c.id === card.companyId)?.name || card.company?.name || 'SIN EMPRESA'}
               </span>
-              {(role === 'ADMIN' || role === 'BACKOFFICE') && (
+              {(role === 'ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); setIsEditingCompany(true); }}
                   className="text-slate-400 hover:text-blue-500"
@@ -95,7 +96,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
       <div className="flex justify-between items-center text-xs text-slate-500">
         <div>Distrito: <span className="font-semibold text-slate-700 uppercase">{districtName}</span></div>
         <div className="font-semibold text-slate-800">
-          {p.totalHogares || 0} HPs
+          {isB2B ? `S/. ${parseFloat(p.totalHogares || 0).toFixed(2)}` : `${p.totalHogares || 0} HPs`}
         </div>
       </div>
 
@@ -104,11 +105,26 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onActionClick(card.stage === 3 ? 'asignacion' : 'ficha', card.id);
+              onActionClick('asignacion', card.id);
             }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 rounded-lg text-[10px] transition-colors uppercase tracking-wider"
           >
             Llenar Formulario
+          </button>
+        </div>
+      )}
+
+      {/* Botón Dar de Baja para el tramo postventa (etapa >= 14 y < 20) */}
+      {role !== 'HUNTER' && card.stage >= 14 && card.stage < 20 && (
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onActionClick('baja', card);
+            }}
+            className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold py-1.5 rounded-lg text-[10px] transition-colors uppercase tracking-wider"
+          >
+            Dar de Baja
           </button>
         </div>
       )}
@@ -267,7 +283,7 @@ export const KanbanBoard: React.FC = () => {
         console.error('Error loading companies', err);
       }
     };
-    if (user?.role === 'ADMIN' || user?.role === 'BACKOFFICE') {
+    if (user?.role === 'ADMIN' || user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA') {
       loadCompanies();
     }
   }, []);
@@ -610,11 +626,23 @@ export const KanbanBoard: React.FC = () => {
     }
   };
 
-  const handleActionClick = (type: string, id: string) => {
+  const handleActionClick = (type: string, data: any) => {
     if (type === 'asignacion') {
-      navigate('/hunter/oportunidades/asignacion', { state: { targetId: id } });
+      navigate('/hunter/oportunidades/asignacion', { state: { targetId: data } });
     } else if (type === 'ficha') {
-      navigate('/hunter/oportunidades/ficha-tecnica', { state: { targetId: id } });
+      navigate('/hunter/oportunidades/ficha-tecnica', { state: { targetId: data } });
+    } else if (type === 'baja') {
+      const card = data;
+      if (activePipeline) {
+        // Encontrar la etapa que tiene isLost=true y posición >= 15 (Baja de Cliente)
+        const bajaStageIndex = activePipeline.stages.findIndex((s: any) => s.isLost && s.position >= 15);
+        if (bajaStageIndex !== -1) {
+          setClosingCard(card);
+          setClosingStageIndex(bajaStageIndex);
+        } else {
+          toast.error('No se encontró la etapa de baja en el embudo.');
+        }
+      }
     }
   };
 
@@ -1188,19 +1216,24 @@ export const KanbanBoard: React.FC = () => {
         <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 scroll-smooth bg-slate-50">
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex gap-4 h-full items-start">
-              {activePipeline.stages.map((stage: any, i: number) => (
-                <KanbanColumn 
-                  key={stage.id} 
-                  stageIndex={i} 
-                  title={stage.name} 
-                  cards={filteredAndSortedCards.filter(c => c.stage === i)} 
-                  onCardClick={Object.assign(setSelectedCard, { isDragDisabled: user?.role === 'HUNTER' })}
-                  role={user?.role}
-                  onActionClick={handleActionClick}
-                  companiesList={companiesList}
-                  onCompanyChange={handleCompanyChange}
-                />
-              ))}
+              {activePipeline.stages
+                .filter((stage: any) => user?.role !== 'POSTVENTA' || stage.position >= 15)
+                .map((stage: any) => {
+                  const absoluteStageIndex = activePipeline.stages.findIndex((s: any) => s.id === stage.id);
+                  return (
+                    <KanbanColumn 
+                      key={stage.id} 
+                      stageIndex={absoluteStageIndex} 
+                      title={stage.name} 
+                      cards={filteredAndSortedCards.filter(c => c.stage === absoluteStageIndex)} 
+                      onCardClick={Object.assign(setSelectedCard, { isDragDisabled: user?.role === 'HUNTER' })}
+                      role={user?.role}
+                      onActionClick={handleActionClick}
+                      companiesList={companiesList}
+                      onCompanyChange={handleCompanyChange}
+                    />
+                  );
+                })}
             </div>
             <DragOverlay>
               {activeCardData ? <SortableCard card={activeCardData} isDragOverlay /> : null}
@@ -1211,7 +1244,9 @@ export const KanbanBoard: React.FC = () => {
         <div className="flex-1 overflow-x-auto">
           <OpportunitiesTable 
             cards={filteredAndSortedCards} 
-            STAGES={activePipeline.stages.map((s: any) => s.name)} 
+            STAGES={activePipeline.stages
+              .filter((stage: any) => user?.role !== 'POSTVENTA' || stage.position >= 15)
+              .map((s: any) => s.name)} 
             onCardClick={setSelectedCard} 
             companiesList={companiesList}
             onCompanyChange={handleCompanyChange}
@@ -1271,17 +1306,32 @@ export const KanbanBoard: React.FC = () => {
             
             {activePipeline.stages[closingStageIndex].isLost && (
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Motivo de Caída (Obligatorio)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {activePipeline.stages[closingStageIndex].name === 'Baja de Cliente' ? 'Motivo de Baja (Obligatorio)' : 'Motivo de Caída (Obligatorio)'}
+                </label>
                 <select 
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
                   value={lostReason} 
                   onChange={e => setLostReason(e.target.value)}
                 >
                   <option value="">Seleccione un motivo...</option>
-                  <option value="Inviable técnicamente">Inviable técnicamente</option>
-                  <option value="Rechazo de Junta Directiva">Rechazo de Junta Directiva</option>
-                  <option value="Demasiado caro">Demasiado caro</option>
-                  <option value="Perdido a competencia">Perdido a competencia</option>
+                  {activePipeline.stages[closingStageIndex].name === 'Baja de Cliente' ? (
+                    <>
+                      <option value="Cliente no paga">Cliente no paga</option>
+                      <option value="Insatisfacción con el servicio">Insatisfacción con el servicio</option>
+                      <option value="Se mudó / Cambio de dirección">Se mudó / Cambio de dirección</option>
+                      <option value="Cancelación voluntaria">Cancelación voluntaria</option>
+                      <option value="Problema técnico recurrente">Problema técnico recurrente</option>
+                      <option value="Otro">Otro</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Inviable técnicamente">Inviable técnicamente</option>
+                      <option value="Rechazo de Junta Directiva">Rechazo de Junta Directiva</option>
+                      <option value="Demasiado caro">Demasiado caro</option>
+                      <option value="Perdido a competencia">Perdido a competencia</option>
+                    </>
+                  )}
                 </select>
               </div>
             )}

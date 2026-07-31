@@ -133,6 +133,23 @@ export class Predio {
   @Column({ length: 80, nullable: true, name: 'origen_ingreso' })
   ingreso: string;
 
+
+  @Column({ length: 50, name: 'canal_hunting', nullable: true })
+  canalHunting: string;
+
+  @Column({ name: 'is_referral', type: 'boolean', default: false })
+  isReferral: boolean;
+
+  @Column({ name: 'referred_hunter_name', type: 'varchar', length: 255, nullable: true })
+  referredHunterName: string;
+
+  @Column({ type: 'uuid', name: 'partner_supervisor_id', nullable: true })
+  partnerSupervisorId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'partner_supervisor_id' })
+  partnerSupervisor: User;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 

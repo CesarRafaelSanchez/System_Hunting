@@ -17,6 +17,9 @@ export class Company {
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
 
+  @Column({ length: 50, name: 'tipo_negocio', default: 'HUNTING_EDIFICIOS' })
+  tipoNegocio: string; // 'HUNTING_EDIFICIOS' | 'VENTAS_B2B'
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 
