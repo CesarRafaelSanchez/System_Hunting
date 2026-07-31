@@ -11,6 +11,8 @@ import { VentaFija } from '../entities/venta-fija.entity';
 import { Team } from '../entities/team.entity';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -33,18 +35,23 @@ async function bootstrap() {
   const passwordHash = await bcrypt.hash('Prueba123!', 10);
 
   // 1. Crear Administrador Global de la Agencia
-  let agencyAdmin = await userRepo.findOne({ where: { email: 'admin@tuempresa.com' } });
+  const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@tuempresa.com';
+  const adminName = process.env.INITIAL_ADMIN_NAME || 'Administrador de Agencia';
+  const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Prueba123!';
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
+
+  let agencyAdmin = await userRepo.findOne({ where: { email: adminEmail } });
   if (!agencyAdmin) {
     agencyAdmin = userRepo.create({
-      email: 'admin@tuempresa.com',
-      fullName: 'Administrador de Agencia',
-      passwordHash,
+      email: adminEmail,
+      fullName: adminName,
+      passwordHash: adminPasswordHash,
       globalRole: 'AGENCY_ADMIN',
       isActive: true,
       role: 'AGENCY_ADMIN', // Legacy fallback
     });
     agencyAdmin = await userRepo.save(agencyAdmin);
-    console.log(`[+] AGENCY_ADMIN Creado: admin@tuempresa.com`);
+    console.log(`[+] AGENCY_ADMIN Creado: ${adminEmail}`);
   }
 
   // 2. Crear las 3 Compañías Semilla
