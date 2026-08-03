@@ -541,27 +541,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                   </div>
                 </div>
 
-                {formData.planoUrl && (
-                  <div>
-                    <h4 className="font-bold text-gray-800 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5 text-ghl-lightBlue"/> Croquis o Plano de Instalación
-                    </h4>
-                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/50">
-                      <FileText className="w-8 h-8 text-blue-500" />
-                      <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Archivo Adjunto</p>
-                        <a 
-                          href={formData.planoUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all"
-                        >
-                          Descargar Croquis / Plano
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                )}
+
               </div>
             )}
 
