@@ -100,7 +100,7 @@ export class VentaFijaService {
       campana: dto.campana,
       adicionales: dto.adicionales,
       tipoServicio: dto.tipoServicio,
-      cantidadLineas: typeof dto.cantidadLineas === 'string' ? parseInt(dto.cantidadLineas) : dto.cantidadLineas,
+      cantidadLineas: typeof dto.cantidadLineas === 'string' && dto.cantidadLineas.trim() !== '' ? parseInt(dto.cantidadLineas) : (typeof dto.cantidadLineas === 'number' && !isNaN(dto.cantidadLineas) ? dto.cantidadLineas : undefined),
       tipoMovil: dto.tipoMovil,
       observaciones: dto.observaciones,
       planoUrl: dto.planoUrl,
