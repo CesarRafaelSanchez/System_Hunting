@@ -1208,7 +1208,7 @@ export const KanbanBoard: React.FC = () => {
           <button onClick={handleExport} className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 text-ghl-blue font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm">
             <Upload className="w-4 h-4" /> Exportar
           </button>
-          <button onClick={() => setShowNewOppModal(true)} className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm">
+          <button onClick={() => navigate('/sales/registrar')} className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm">
             <Plus className="w-4 h-4" /> Añadir oportunidad
           </button>
 
