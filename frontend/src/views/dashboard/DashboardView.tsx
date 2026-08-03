@@ -113,7 +113,7 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ADMIN / ACCOUNT_ADMIN DASHBOARD */}
-      {(role === 'ADMIN' || role === 'ACCOUNT_ADMIN') && (
+      {(role === 'ACCOUNT_ADMIN' || role === 'ACCOUNT_ADMIN') && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <KpiCard title="Total Oportunidades" value={totalOpps} />

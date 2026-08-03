@@ -189,7 +189,7 @@ export const TimeMark: React.FC = () => {
   };
 
   // --- VISTA PARA BACKOFFICE / ADMIN ---
-  if (user?.role === 'BACKOFFICE' || user?.role === 'ADMIN') {
+  if (user?.role === 'BACKOFFICE' || user?.role === 'ACCOUNT_ADMIN') {
     const [huntersData, setHuntersData] = useState<any[]>([]);
 
     useEffect(() => {

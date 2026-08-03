@@ -136,7 +136,7 @@ export const OpportunitiesTable: React.FC<{ cards: any[]; STAGES: string[]; onCa
                         <span className="text-xs font-semibold text-slate-600 uppercase">
                           {companiesList?.find((comp: any) => comp.id === c.companyId)?.name || c.company?.name || 'Sin Empresa'}
                         </span>
-                        {(userRole === 'ADMIN' || userRole === 'BACKOFFICE' || userRole === 'BACKOFFICE_VENTAS') && (
+                        {(userRole === 'ACCOUNT_ADMIN' || userRole === 'BACKOFFICE' || userRole === 'BACKOFFICE_VENTAS') && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); setEditingCompanyId(c.id); }}
                             className="text-slate-400 hover:text-blue-500 transition-colors"

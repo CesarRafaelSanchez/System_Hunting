@@ -235,7 +235,7 @@ async function bootstrap() {
     { email: 'admin@fs.pe', fullName: 'Admin FS', slug: 'fs', role: 'ACCOUNT_ADMIN', supervisorEmail: null },
     { email: 'backoffice@fs.pe', fullName: 'Backoffice FS', slug: 'fs', role: 'BACKOFFICE', supervisorEmail: null },
     { email: 'postventa@fs.pe', fullName: 'Postventa FS', slug: 'fs', role: 'POSTVENTA', supervisorEmail: null },
-    { email: 'asesor.test@fs.pe', fullName: 'Asesor Prueba', slug: 'fs', role: 'ASESOR_VENTAS', supervisorEmail: null },
+    { email: 'asesor.test@fs.pe', fullName: 'Asesor Prueba', slug: 'fs', role: 'ASESOR_VENTAS', supervisorEmail: 'giovanni.figueroa@conection-futura.com' },
     
     // FS - Supervisores
     { email: 'giovanni.figueroa@conection-futura.com', fullName: 'Giovanni Figueroa', slug: 'fs', role: 'SUPERVISOR_VENTAS', supervisorEmail: null },

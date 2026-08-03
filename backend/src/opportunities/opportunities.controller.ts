@@ -23,6 +23,30 @@ export class OpportunitiesController {
     return this.opportunitiesService.createOpportunity(req.user, createOpportunityDto, manager);
   }
 
+  @Get()
+  async findAll(@Request() req: any) {
+    // Retornamos raw opportunities con map a formato esperado por el frontend
+    const opps = await this.opportunitiesService.findAll(req.user);
+    return opps.map(o => ({
+      ...o,
+      id: o.id,
+      title: o.property?.nombreProyecto || o.ventaFija?.razonSocial || `Op: ${o.code}`,
+      subtitle: o.property?.nombreVia || o.ventaFija?.ruc || `Etapa ID: ${o.currentStageId?.slice(0,5)}`,
+      stage: o.currentStage ? (o.currentStage.position - 1) : (o.status === 'OPEN' ? 0 : (o.status === 'WON' ? 18 : 19)),
+      property: o.property ? {
+        ...o.property,
+        distrito: o.property.distrito
+      } : null,
+      ventaFija: o.ventaFija || null,
+      company: o.company ? {
+        id: o.company.id,
+        name: o.company.name,
+        tipoNegocio: o.company.tipoNegocio
+      } : null,
+      createdByUserName: o.currentOwnerUser?.fullName || null
+    }));
+  }
+
   @Post('bulk')
   async createOpportunitiesBulk(
     @Request() req: any,

@@ -75,6 +75,7 @@ export class VentaFijaService {
       celularRrll: dto.celularRrll,
       correoElectronico: dto.correoElectronico,
       direccionInstalacion: dto.direccionInstalacion,
+      distrito: dto.distrito,
       tipoTecnologia: dto.tipoTecnologia,
       tipoPlay: dto.tipoPlay,
       cargoFijoSinIgv: typeof dto.cargoFijoSinIgv === 'string' ? parseFloat(dto.cargoFijoSinIgv) : dto.cargoFijoSinIgv,
@@ -105,26 +106,19 @@ export class VentaFijaService {
     if (isAgencyAdmin || user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN' || user.role === 'BACKOFFICE' || user.role === 'BACKOFFICE_VENTAS') {
       whereClause = user.companyId ? { companyId: user.companyId } : {};
     } else if (user.role === 'SUPERVISOR_VENTAS') {
-      // Find team where this user is supervisor
       const team = await manager.findOne(Team, { where: { supervisorId: user.id, companyId: user.companyId } });
+      const userIds = [user.id]; // Siempre puede ver sus propias oportunidades
+
       if (team) {
-        // Find all users in this team
         const userCompanies = await manager.find(UserCompany, { where: { teamId: team.id } });
-        const userIds = userCompanies.map(uc => uc.userId);
-        if (userIds.length > 0) {
-          whereClause = [
-            { companyId: user.companyId, createdByUserId: In(userIds) },
-            { companyId: user.companyId, currentOwnerUserId: In(userIds) }
-          ];
-        } else {
-          // Team is empty, supervisor sees nothing
-          return [];
-        }
-      } else {
-        // User is a supervisor but has no team, sees nothing or just own? 
-        // Requirements say: "retorna únicamente las oportunidades creadas o pertenecientes a esos asesores."
-        return [];
+        const teamUserIds = userCompanies.map(uc => uc.userId);
+        userIds.push(...teamUserIds);
       }
+
+      whereClause = [
+        { companyId: user.companyId, createdByUserId: In(userIds) },
+        { companyId: user.companyId, currentOwnerUserId: In(userIds) }
+      ];
     } else if (user.role === 'HUNTER' || user.role === 'ASESOR_VENTAS') {
       whereClause = [
         { companyId: user.companyId, createdByUserId: user.id },

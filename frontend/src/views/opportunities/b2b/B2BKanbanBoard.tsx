@@ -83,7 +83,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
               }`}>
                 {companiesList?.find((c: any) => c.id === card.companyId)?.name || card.company?.name || 'SIN EMPRESA'}
               </span>
-              {(role === 'ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
+              {(role === 'ACCOUNT_ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); setIsEditingCompany(true); }}
                   className="text-slate-400 hover:text-blue-500"
@@ -97,6 +97,24 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
       </div>
 
       <div className="border-t border-slate-50 my-2"></div>
+
+      <div className="flex flex-wrap gap-1 mb-2">
+        {(role === 'SUPERVISOR_VENTAS' || role === 'ACCOUNT_ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
+          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded border border-blue-100 truncate max-w-[170px]" title={card.createdByUserName || card.currentOwnerUser?.fullName}>
+            👤 {card.createdByUserName || card.currentOwnerUser?.fullName || 'Asesor'}
+          </span>
+        )}
+        {parseFloat(vf.cargoFijoSinIgv || 0) >= 1000 && (
+          <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded border border-amber-200">
+            ⭐ High-Ticket
+          </span>
+        )}
+        {card.currentStageEnteredAt && (new Date().getTime() - new Date(card.currentStageEnteredAt).getTime()) > 10 * 24 * 60 * 60 * 1000 && (
+          <span className="text-[9px] bg-red-100 text-red-700 font-extrabold px-1.5 py-0.5 rounded border border-red-200">
+            ⚠️ Estancado (+10d)
+          </span>
+        )}
+      </div>
 
       <div className="flex justify-between items-center text-xs text-slate-500">
         <div>Distrito: <span className="font-semibold text-slate-700 uppercase">{districtName}</span></div>
@@ -288,10 +306,16 @@ export const KanbanBoard: React.FC = () => {
         console.error('Error loading companies', err);
       }
     };
-    if (user?.role === 'ADMIN' || user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA') {
+    if (user?.role === 'ACCOUNT_ADMIN' || user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA') {
       loadCompanies();
     }
   }, []);
+
+  useEffect(() => {
+    if (activePipeline) {
+      fetchCards();
+    }
+  }, [activePipeline]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -519,8 +543,10 @@ export const KanbanBoard: React.FC = () => {
       const { useAuthStore } = await import('../../../store/useAuthStore');
       const currentUser = useAuthStore.getState().user;
       
-      if (currentUser?.role === 'HUNTER') {
+      if (currentUser?.role === 'HUNTER' || currentUser?.role === 'ASESOR_VENTAS') {
         setCards(mappedOpps.filter(c => c.createdByUserId === currentUser.id || c.currentOwnerUserId === currentUser.id));
+      } else if (currentUser?.role === 'POSTVENTA') {
+        setCards(mappedOpps.filter(c => (c.currentStage?.position >= 15) || (c.stage >= 14)));
       } else {
         setCards(mappedOpps);
       }
@@ -799,7 +825,7 @@ export const KanbanBoard: React.FC = () => {
 
   // RENDERIZAR FORMULARIO DE CONFIGURACIÓN / EDICIÓN
   if (showConfigForm) {
-    if (!hasPipeline && user?.role !== 'ADMIN') {
+    if (!hasPipeline && user?.role !== 'ACCOUNT_ADMIN') {
       return (
         <div className="p-12 bg-white rounded-2xl shadow-sm border border-gray-200 text-center max-w-lg mx-auto mt-12 space-y-4">
           <AlertCircle className="w-12 h-12 text-blue-500 mx-auto" />
@@ -1197,7 +1223,7 @@ export const KanbanBoard: React.FC = () => {
             {showAdminMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/80 py-1.5 z-50">
                 <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Acciones del Embudo</div>
-                {user?.role === 'ADMIN' ? (
+                {user?.role === 'ACCOUNT_ADMIN' ? (
                   <button
                     onClick={() => {
                       setIsEditingPipeline(true);

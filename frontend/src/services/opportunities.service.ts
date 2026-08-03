@@ -20,16 +20,16 @@ export interface UpdateOpportunityPayload {
 }
 
 export const opportunitiesService = {
-  // Obtener todas las oportunidades
+  // Obtener todas las oportunidades (Legacy apunta a hunting)
   getAll: async () => {
-    return fetchApi('/opportunities', {
+    return fetchApi('/hunting/opportunities', {
       method: 'GET'
     });
   },
 
   // Actualizar datos del formulario en la oportunidad
   updateForms: async (id: string, payload: UpdateOpportunityPayload) => {
-    return fetchApi(`/opportunities/${id}`, {
+    return fetchApi(`/hunting/opportunities/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
@@ -37,7 +37,7 @@ export const opportunitiesService = {
 
   // Transición de etapa en el Kanban
   transitionStage: async (id: string, toStageIdOrCode: string, reason?: string, isValidatedByBO?: boolean, towersData?: any[]) => {
-    return fetchApi(`/opportunities/${id}/stage`, {
+    return fetchApi(`/hunting/opportunities/${id}/stage`, {
       method: 'PATCH',
       body: JSON.stringify({ toStageIdOrCode, reason, isValidatedByBO, towersData }),
     });
