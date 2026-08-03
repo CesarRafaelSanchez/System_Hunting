@@ -45,7 +45,7 @@ export const Sidebar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
+        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: true } },
         { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
@@ -81,7 +81,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Dashboard', path: isVentas ? '/sales/dashboard' : '/dashboard', icon: BarChart3 },
         { name: isVentas ? 'Kanban B2B' : 'Kanban', path: isVentas ? '/sales/oportunidades' : '/backoffice/oportunidades', icon: LayoutDashboard },
         ...(isVentas ? [
-          { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
+          { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: true } },
           { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
         ] : [
           { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
@@ -119,6 +119,7 @@ export const Sidebar: React.FC = () => {
             <NavLink
               key={link.path}
               to={link.path}
+              state={(link as any).state}
               title={isCollapsed ? link.name : undefined}
               className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${isActive ? 'bg-ghl-lightBlue text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}
             >

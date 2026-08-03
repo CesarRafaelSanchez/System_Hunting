@@ -267,7 +267,7 @@ export const DashboardAsesor: React.FC = () => {
           </div>
 
           <button 
-            onClick={() => navigate('/sales/registrar')}
+            onClick={() => navigate('/sales/oportunidades/nueva', { state: { openForm: true } })}
             className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-all text-left"
           >
             <div className="flex items-center gap-3">

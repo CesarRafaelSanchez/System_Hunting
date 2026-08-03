@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FormVentaB2BGénesis } from './FormVentaB2BGénesis';
 import { ventasService } from '../../services/ventas.service';
 import { Search, Plus, Building2, MapPin, UserCheck, Users } from 'lucide-react';
@@ -6,7 +7,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 export const RegistrarVenta: React.FC = () => {
   const { user } = useAuthStore();
-  const [showForm, setShowForm] = useState(false);
+  const location = useLocation();
+  const [showForm, setShowForm] = useState(location.state?.openForm || false);
   const [searchTerm, setSearchTerm] = useState('');
   const [ventas, setVentas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,6 +31,12 @@ export const RegistrarVenta: React.FC = () => {
   useEffect(() => {
     fetchVentas();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (location.state?.openForm) {
+      setShowForm(true);
+    }
+  }, [location.state]);
 
   const isSupervisorOrAdmin = user?.role === 'SUPERVISOR_VENTAS' || user?.role === 'ACCOUNT_ADMIN' || user?.role === 'AGENCY_ADMIN';
 
