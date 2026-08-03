@@ -17,6 +17,7 @@ export interface UserData {
   globalRole: string | null;
   companyId: string | null;
   supervisorId?: string | null;
+  tipoNegocio?: 'HUNTING_EDIFICIOS' | 'VENTAS_B2B';
   companies?: CompanyData[];
 }
 
@@ -84,9 +85,9 @@ export const useAuthStore = create<AuthState>()(
           name: 'Suplantado',
           slug: 'impersonated',
           role: user.role,
-          tipoNegocio: ['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA'].includes(user.role)
+          tipoNegocio: user.tipoNegocio || (['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA'].includes(user.role)
             ? 'VENTAS_B2B'
-            : 'HUNTING_EDIFICIOS',
+            : 'HUNTING_EDIFICIOS'),
         } : null,
       })),
       restoreImpersonation: () => set((state) => {

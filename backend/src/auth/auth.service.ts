@@ -114,11 +114,13 @@ export class AuthService {
 
     let activeCompanyId: string | null = null;
     let activeRole: string = 'HUNTER';
+    let activeTipoNegocio: string | undefined = undefined;
 
     if (isAgencyAdmin) {
       // Admin de Agencia: impersonar en el primer tenant que tenga el usuario o null
       activeCompanyId = targetUserCompanies[0]?.companyId || null;
       activeRole = targetUserCompanies[0]?.role || targetUser.role;
+      activeTipoNegocio = targetUserCompanies[0]?.company?.tipoNegocio;
     } else {
       // Admin Local: validar que el usuario objetivo pertenezca a la misma empresa
       const targetMembership = targetUserCompanies.find((uc) => uc.companyId === currentUser.companyId);
@@ -133,6 +135,7 @@ export class AuthService {
 
       activeCompanyId = currentUser.companyId;
       activeRole = targetMembership.role;
+      activeTipoNegocio = targetMembership.company?.tipoNegocio;
     }
 
     const payload = {
@@ -143,6 +146,7 @@ export class AuthService {
       globalRole: targetUser.globalRole,
       fullName: targetUser.fullName,
       supervisorId: targetUser.supervisorId || null,
+      tipoNegocio: activeTipoNegocio,
     };
 
     return {
@@ -155,6 +159,7 @@ export class AuthService {
         role: activeRole,
         globalRole: targetUser.globalRole,
         supervisorId: targetUser.supervisorId || null,
+        tipoNegocio: activeTipoNegocio,
       },
     };
   }
