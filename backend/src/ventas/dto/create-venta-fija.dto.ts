@@ -51,4 +51,70 @@ export class CreateVentaFijaDto {
   @IsString()
   @IsOptional()
   initialStageCode?: string;
+
+  @IsString()
+  @IsOptional()
+  nombrePadresRrll?: string;
+
+  @IsString()
+  @IsOptional()
+  fechaNacimientoRrll?: string;
+
+  @IsString()
+  @IsOptional()
+  lugarNacimientoRrll?: string;
+
+  @IsString()
+  @IsOptional()
+  tipoDomicilio?: string;
+
+  @IsString()
+  @IsOptional()
+  direccionFiscal?: string;
+
+  @IsString()
+  @IsOptional()
+  departamento?: string;
+
+  @IsString()
+  @IsOptional()
+  provincia?: string;
+
+  @IsString()
+  @IsOptional()
+  referencia?: string;
+
+  @IsOptional()
+  coordenadas?: string; // We'll map this to coordenadasGps in the service
+
+  @IsString()
+  @IsOptional()
+  velocidad?: string;
+
+  @IsString()
+  @IsOptional()
+  campana?: string;
+
+  @IsString()
+  @IsOptional()
+  adicionales?: string;
+
+  @IsString()
+  @IsOptional()
+  tipoServicio?: string;
+
+  @IsOptional()
+  cantidadLineas?: number | string;
+
+  @IsString()
+  @IsOptional()
+  tipoMovil?: string;
+
+  @IsString()
+  @IsOptional()
+  observaciones?: string;
+
+  @IsString()
+  @IsOptional()
+  planoUrl?: string;
 }

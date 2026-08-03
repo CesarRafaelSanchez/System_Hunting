@@ -66,6 +66,14 @@ export class VentaFijaService {
     });
     const savedOpportunity = await manager.save(opportunity);
 
+    let coords: { x: number; y: number } | null = null;
+    if (dto.coordenadas) {
+      const parts = dto.coordenadas.split(',').map(p => parseFloat(p.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        coords = { x: parts[0], y: parts[1] };
+      }
+    }
+
     const venta = manager.create(VentaFija, {
       opportunityId: savedOpportunity.id,
       ruc: dto.ruc,
@@ -74,11 +82,28 @@ export class VentaFijaService {
       dniRrll: dto.dniRrll,
       celularRrll: dto.celularRrll,
       correoElectronico: dto.correoElectronico,
+      nombrePadresRrll: dto.nombrePadresRrll,
+      fechaNacimientoRrll: dto.fechaNacimientoRrll,
+      lugarNacimientoRrll: dto.lugarNacimientoRrll,
+      tipoDomicilio: dto.tipoDomicilio,
+      direccionFiscal: dto.direccionFiscal,
       direccionInstalacion: dto.direccionInstalacion,
+      departamento: dto.departamento,
+      provincia: dto.provincia,
       distrito: dto.distrito,
+      referencia: dto.referencia,
+      coordenadasGps: coords,
       tipoTecnologia: dto.tipoTecnologia,
       tipoPlay: dto.tipoPlay,
+      velocidad: dto.velocidad,
       cargoFijoSinIgv: typeof dto.cargoFijoSinIgv === 'string' ? parseFloat(dto.cargoFijoSinIgv) : dto.cargoFijoSinIgv,
+      campana: dto.campana,
+      adicionales: dto.adicionales,
+      tipoServicio: dto.tipoServicio,
+      cantidadLineas: typeof dto.cantidadLineas === 'string' ? parseInt(dto.cantidadLineas) : dto.cantidadLineas,
+      tipoMovil: dto.tipoMovil,
+      observaciones: dto.observaciones,
+      planoUrl: dto.planoUrl,
     });
     const savedVenta = await manager.save(venta);
 
