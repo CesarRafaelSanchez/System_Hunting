@@ -362,8 +362,67 @@ export const OpportunitySplitView: React.FC<{
             
             {/* Pestaña: INFORMACIÓN BÁSICA */}
             {activeTab === 'basic_info' && (
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2"><Building className="w-5 h-5 text-blue-900"/> Detalles de la Oportunidad</h4>
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-8">
+                
+                {/* Resumen para Contrato por Voz */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                    <FileText className="w-5 h-5 text-blue-900" /> Datos Básicos para Contrato por Voz
+                  </h4>
+                  <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                    <table className="w-full text-left border-collapse text-sm text-gray-900" style={{ borderCollapse: 'collapse', width: '100%', border: '1px solid #d1d5db' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Número de RUC</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{getReadonlyValue(formData.ruc)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Razón Social</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{getReadonlyValue(formData.razonSocial) || getReadonlyValue(card.title)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Nombres y apellidos completos</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{getReadonlyValue(formData.representanteLegal)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Tipo y número de documento de identidad</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{formData.dniRrll ? `DNI - ${formData.dniRrll}` : '-'}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Lugar y fecha de nacimiento</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">
+                            {formData.lugarNacimientoDist ? `${formData.lugarNacimientoDist}, ${formData.lugarNacimientoProv}, ${formData.lugarNacimientoDep}` : '-'} / {getReadonlyValue(formData.fechaNacimientoRrll)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Nombre de sus padres</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">
+                            Padre: {getReadonlyValue(formData.nombrePadreRrll)}<br/>
+                            Madre: {getReadonlyValue(formData.nombreMadreRrll)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Número de contacto</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{getReadonlyValue(formData.celularRrll)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Dirección de instalación</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">
+                            {formData.direccionInstalacion ? formData.direccionInstalacion : 
+                             `${formData.viaInstalacion || ''} ${formData.numeroInstalacion || ''} ${formData.urbanizacionInstalacion || ''}, ${formData.distrito || ''}, ${formData.provincia || ''}, ${formData.departamento || ''}`.trim().replace(/^[,\s]+|[,\s]+$/g, '') || '-'}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontWeight: 'bold', padding: '8px' }} className="w-1/3 bg-gray-100 font-bold p-3">Correo electrónico del cliente</td>
+                          <td style={{ border: '1px solid #d1d5db', padding: '8px' }} className="p-3">{getReadonlyValue(formData.correoElectronico)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 italic">Sombree el cuadro completo, presione Ctrl+C y luego péguelo en Word para mantener la cuadrícula.</p>
+                </div>
+
+                  <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2"><Building className="w-5 h-5 text-blue-900"/> Detalles Adicionales de la Oportunidad</h4>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Razón Social / Cliente</label>
