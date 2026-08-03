@@ -239,7 +239,7 @@ export const CompaniesManagement: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-gray-900">{user.fullName}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                        user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
+                        user.role === 'ACCOUNT_ADMIN' ? 'bg-purple-100 text-purple-700' :
                         user.role === 'BACKOFFICE' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA' ? 'bg-blue-100 text-blue-700' :
                         'bg-orange-100 text-orange-700'
                       }`}>

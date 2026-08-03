@@ -78,7 +78,7 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
               }`}>
                 {companiesList?.find((c: any) => c.id === card.companyId)?.name || card.company?.name || 'SIN EMPRESA'}
               </span>
-              {(role === 'ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
+              {(role === 'ACCOUNT_ADMIN' || role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS') && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); setIsEditingCompany(true); }}
                   className="text-slate-400 hover:text-blue-500"
@@ -283,10 +283,16 @@ export const KanbanBoard: React.FC = () => {
         console.error('Error loading companies', err);
       }
     };
-    if (user?.role === 'ADMIN' || user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA') {
+    if (user?.role === 'ACCOUNT_ADMIN' || user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA') {
       loadCompanies();
     }
   }, []);
+
+  useEffect(() => {
+    if (activePipeline) {
+      fetchCards();
+    }
+  }, [activePipeline]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -794,7 +800,7 @@ export const KanbanBoard: React.FC = () => {
 
   // RENDERIZAR FORMULARIO DE CONFIGURACIÓN / EDICIÓN
   if (showConfigForm) {
-    if (!hasPipeline && user?.role !== 'ADMIN') {
+    if (!hasPipeline && user?.role !== 'ACCOUNT_ADMIN') {
       return (
         <div className="p-12 bg-white rounded-2xl shadow-sm border border-gray-200 text-center max-w-lg mx-auto mt-12 space-y-4">
           <AlertCircle className="w-12 h-12 text-blue-500 mx-auto" />
@@ -1192,7 +1198,7 @@ export const KanbanBoard: React.FC = () => {
             {showAdminMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/80 py-1.5 z-50">
                 <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Acciones del Embudo</div>
-                {user?.role === 'ADMIN' ? (
+                {user?.role === 'ACCOUNT_ADMIN' ? (
                   <button
                     onClick={() => {
                       setIsEditingPipeline(true);

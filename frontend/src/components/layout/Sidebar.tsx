@@ -45,15 +45,7 @@ export const Sidebar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Historial', path: '/backoffice/historial', icon: History },
-      ];
-    }
-
-    if (role === 'BACKOFFICE_VENTAS') {
-      return [
-        { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
-        { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
+        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
         { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
@@ -66,7 +58,15 @@ export const Sidebar: React.FC = () => {
       ];
     }
 
-    if (role === 'BACKOFFICE' || role === 'SUPERVISOR_HUNTING') {
+    if (role === 'BACKOFFICE' || role === 'BACKOFFICE_VENTAS' || role === 'SUPERVISOR_HUNTING') {
+      if (isVentas) {
+        return [
+          { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
+          { name: 'Kanban B2B', path: '/sales/oportunidades', icon: LayoutDashboard },
+          { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
+          { name: 'Historial', path: '/backoffice/historial', icon: History },
+        ];
+      }
       return [
         { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
         { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
@@ -76,14 +76,17 @@ export const Sidebar: React.FC = () => {
       ];
     }
 
-    if (role === 'ADMIN' || role === 'ACCOUNT_ADMIN') {
+    if (role === 'ACCOUNT_ADMIN') {
       return [
-        { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-        { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
-        ...(!isVentas ? [
+        { name: 'Dashboard', path: isVentas ? '/sales/dashboard' : '/dashboard', icon: BarChart3 },
+        { name: isVentas ? 'Kanban B2B' : 'Kanban', path: isVentas ? '/sales/oportunidades' : '/backoffice/oportunidades', icon: LayoutDashboard },
+        ...(isVentas ? [
+          { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
+          { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
+        ] : [
           { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
           { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
-        ] : []),
+        ]),
         { name: isVentas ? 'Usuarios y Asesores' : 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
         { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];

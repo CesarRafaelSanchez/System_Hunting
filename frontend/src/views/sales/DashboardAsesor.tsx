@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PhoneCall, TrendingUp, DollarSign, Users, Award } from 'lucide-react';
-import { opportunitiesService } from '../../services/opportunities.service';
+import { ventasService } from '../../services/ventas.service';
 
 export const DashboardAsesor: React.FC = () => {
   const { user } = useAuthStore();
@@ -24,7 +24,7 @@ export const DashboardAsesor: React.FC = () => {
     const fetchMetrics = async () => {
       setLoading(true);
       try {
-        const response = await opportunitiesService.getAll();
+        const response = await ventasService.getAll();
         const data = (response as any).data || response;
         const list = Array.isArray(data) ? data : [];
         

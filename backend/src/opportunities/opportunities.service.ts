@@ -45,6 +45,37 @@ export class OpportunitiesService {
     @InjectQueue('report-generation') private readonly reportQueue: Queue
   ) {}
   
+  async findAll(user: any) {
+    let whereClause: any = {};
+    const isAgencyAdmin = user.globalRole === 'AGENCY_ADMIN' || user.role === 'AGENCY_ADMIN';
+
+    if (isAgencyAdmin || user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN' || user.role === 'BACKOFFICE' || user.role === 'BACKOFFICE_VENTAS') {
+      whereClause = user.companyId ? { companyId: user.companyId } : {};
+    } else if (user.role === 'HUNTER' || user.role === 'ASESOR_VENTAS') {
+      whereClause = [
+        { companyId: user.companyId, createdByUserId: user.id },
+        { companyId: user.companyId, currentOwnerUserId: user.id }
+      ];
+    } else {
+      whereClause = { companyId: user.companyId };
+    }
+
+    return this.opportunitiesRepository.find({
+      where: whereClause,
+      relations: {
+        currentStage: true,
+        company: true,
+        property: {
+          distrito: true,
+          hunterPrincipal: true,
+          torres: { pisos: true }
+        },
+        currentOwnerUser: true,
+        ventaFija: true,
+      }
+    });
+  }
+
   async createOpportunity(user: any, dto: CreateOpportunityDto, manager: EntityManager) {
     // 1. Buscar la etapa inicial para el pipeline solicitado
     let targetStage: PipelineStage | null = null;

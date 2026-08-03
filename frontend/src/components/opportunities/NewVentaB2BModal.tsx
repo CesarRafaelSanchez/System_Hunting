@@ -139,7 +139,7 @@ export const NewVentaB2BModal: React.FC<NewVentaB2BModalProps> = ({ isOpen, onCl
               </div>
             </div>
 
-            {user?.role === 'ADMIN' && companiesList && (
+            {user?.role === 'ACCOUNT_ADMIN' && companiesList && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase">Empresa Asignada</label>
                 <select 

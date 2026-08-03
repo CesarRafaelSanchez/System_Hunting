@@ -18,14 +18,26 @@ const Form3FichaDatos = React.lazy(() => import('../views/hunter/Form3FichaDatos
 const RegistrarVenta = React.lazy(() => import('../views/sales/RegistrarVenta').then(m => ({ default: m.RegistrarVenta })));
 const DashboardAsesor = React.lazy(() => import('../views/sales/DashboardAsesor').then(m => ({ default: m.DashboardAsesor })));
 const DashboardSupervisor = React.lazy(() => import('../views/sales/DashboardSupervisor').then(m => ({ default: m.DashboardSupervisor })));
+const DashboardAdminFS = React.lazy(() => import('../views/sales/DashboardAdminFS').then(m => ({ default: m.DashboardAdminFS })));
+const DashboardPostventa = React.lazy(() => import('../views/sales/DashboardPostventa').then(m => ({ default: m.DashboardPostventa })));
 
 import { useParams } from 'react-router-dom';
 
 const SalesDashboardRoute = () => {
   const { user } = useAuthStore();
+  const isLocalAdmin = user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN';
+
   return (
     <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando dashboard...</div>}>
-      {user?.role === 'SUPERVISOR_VENTAS' ? <DashboardSupervisor /> : <DashboardAsesor />}
+      {isLocalAdmin ? (
+        <DashboardAdminFS />
+      ) : user?.role === 'POSTVENTA' ? (
+        <DashboardPostventa />
+      ) : user?.role === 'SUPERVISOR_VENTAS' || user?.role === 'BACKOFFICE_VENTAS' ? (
+        <DashboardSupervisor />
+      ) : (
+        <DashboardAsesor />
+      )}
     </Suspense>
   );
 };
@@ -52,7 +64,6 @@ const PublicForm3Route = () => {
   );
 };
 
-const KanbanBoard = React.lazy(() => import('../views/backoffice/KanbanBoard').then(m => ({ default: m.KanbanBoard })));
 const HuntingKanbanBoard = React.lazy(() => import('../views/opportunities/hunting/HuntingKanbanBoard').then(m => ({ default: m.KanbanBoard })));
 const B2BKanbanBoard = React.lazy(() => import('../views/opportunities/b2b/B2BKanbanBoard').then(m => ({ default: m.KanbanBoard })));
 const UserManagement = React.lazy(() => import('../views/admin/UserManagement').then(m => ({ default: m.UserManagement })));
@@ -91,11 +102,12 @@ const ProtectedRoute = ({ children, allowedRoles, bypassWorkspaceCheck }: { chil
     // Normalizar roles permitidos para los roles de Ventas
     const extendedAllowedRoles = [...allowedRoles];
     if (allowedRoles.includes('HUNTER')) extendedAllowedRoles.push('ASESOR_VENTAS');
-    if (allowedRoles.includes('BACKOFFICE')) {
+    if (allowedRoles.includes('BACKOFFICE') || allowedRoles.includes('BACKOFFICE_VENTAS')) {
+      extendedAllowedRoles.push('BACKOFFICE');
+      extendedAllowedRoles.push('BACKOFFICE_VENTAS');
       extendedAllowedRoles.push('SUPERVISOR_HUNTING');
       extendedAllowedRoles.push('SUPERVISOR_VENTAS');
       extendedAllowedRoles.push('ACCOUNT_ADMIN');
-      extendedAllowedRoles.push('BACKOFFICE_VENTAS');
       extendedAllowedRoles.push('POSTVENTA');
     }
     if (allowedRoles.includes('ADMIN')) {
@@ -130,8 +142,18 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     }
     if (user.role === 'HUNTER') return <Navigate to="/hunter" replace />;
     if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
-    if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
-    if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN') return <Navigate to="/admin" replace />;
+    if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) {
+      if (activeWorkspace?.tipoNegocio === 'VENTAS_B2B') {
+        return <Navigate to="/sales/dashboard" replace />;
+      }
+      return <Navigate to="/backoffice/oportunidades" replace />;
+    }
+    if (user.role === 'ACCOUNT_ADMIN' || user.role === 'ADMIN') {
+      if (activeWorkspace?.tipoNegocio === 'VENTAS_B2B') {
+        return <Navigate to="/sales/dashboard" replace />;
+      }
+      return <Navigate to="/backoffice/oportunidades" replace />;
+    }
     
     if (isAgencyAdmin && !activeWorkspace) {
       if (user.companies && user.companies.length > 0) {
@@ -241,7 +263,7 @@ export const AppRouter = () => {
             } />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA', 'ACCOUNT_ADMIN', 'HUNTER']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE', 'BACKOFFICE_VENTAS', 'POSTVENTA', 'ACCOUNT_ADMIN', 'HUNTER']} />}>
             <Route path="/sales/oportunidades/nueva" element={
               <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
                 <RegistrarVenta />
@@ -258,7 +280,7 @@ export const AppRouter = () => {
           <Route element={<ProtectedRoute allowedRoles={['BACKOFFICE', 'ADMIN']} />}>
             <Route path="/backoffice/oportunidades" element={
               <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando tablero...</div>}>
-                <KanbanBoard />
+                <HuntingKanbanBoard />
               </Suspense>
             } />
             <Route path="/backoffice/auditoria" element={

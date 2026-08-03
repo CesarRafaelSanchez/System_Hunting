@@ -138,7 +138,7 @@ export const ImportExportExcelModal: React.FC<ImportExportExcelModalProps> = ({ 
                 </button>
               </div>
 
-              {user?.role === 'ADMIN' && companiesList && (
+              {user?.role === 'ACCOUNT_ADMIN' && companiesList && (
                 <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
                   <label className="text-xs font-bold text-blue-800 whitespace-nowrap">Asignar todas a:</label>
                   <select 

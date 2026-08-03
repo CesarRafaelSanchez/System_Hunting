@@ -158,7 +158,7 @@ export const Topbar: React.FC = () => {
                     </div>
                     <div className="border-t border-gray-100"></div>
                     
-                    {(user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN' || user?.globalRole === 'AGENCY_ADMIN') && (
+                    {(user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ACCOUNT_ADMIN' || user?.globalRole === 'AGENCY_ADMIN') && (
                       <>
                         <button 
                           onClick={handleImpersonateClick}

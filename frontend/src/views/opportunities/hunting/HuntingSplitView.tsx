@@ -65,7 +65,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
   const [usersList, setUsersList] = useState<any[]>([]);
   
   const { user } = useAuthStore();
-  const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA' || user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN';
+  const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA' || user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ACCOUNT_ADMIN';
   const isB2B = false;
   
 
@@ -1054,7 +1054,7 @@ export const OpportunitySplitView: React.FC<{ card: any; onClose: () => void; on
                 </div>
               )}
               
-              {user?.role === 'ADMIN' && (
+              {user?.role === 'ACCOUNT_ADMIN' && (
                 <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
                   <p className="text-xs font-bold text-gray-700 uppercase mb-2">Reasignar Propietario</p>
                   <select 

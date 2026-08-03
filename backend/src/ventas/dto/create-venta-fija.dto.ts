@@ -42,6 +42,10 @@ export class CreateVentaFijaDto {
 
   @IsString()
   @IsOptional()
+  distrito?: string;
+
+  @IsString()
+  @IsOptional()
   companyId?: string;
 
   @IsString()

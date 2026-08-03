@@ -49,9 +49,19 @@ export const LoginView: React.FC = () => {
         if (singleCompany.role === 'HUNTER') {
           navigate('/hunter');
         } else if (singleCompany.role === 'BACKOFFICE' || singleCompany.role === 'SUPERVISOR_HUNTING') {
-          navigate('/backoffice/oportunidades');
+          if (singleCompany.tipoNegocio === 'VENTAS_B2B') {
+            navigate('/sales/dashboard');
+          } else {
+            navigate('/backoffice/oportunidades');
+          }
         } else if (['ASESOR_VENTAS', 'SUPERVISOR_VENTAS', 'BACKOFFICE_VENTAS', 'POSTVENTA'].includes(singleCompany.role)) {
           navigate('/sales/dashboard');
+        } else if (singleCompany.role === 'ACCOUNT_ADMIN') {
+          if (singleCompany.tipoNegocio === 'VENTAS_B2B') {
+            navigate('/sales/dashboard');
+          } else {
+            navigate('/backoffice/oportunidades');
+          }
         } else {
           navigate('/admin');
         }
