@@ -1355,6 +1355,17 @@ export const KanbanBoard: React.FC = () => {
                       <option value="Problema técnico recurrente">Problema técnico recurrente</option>
                       <option value="Otro">Otro</option>
                     </>
+                  ) : activePipeline.stages[closingStageIndex].name === 'Rechazo Oferta' ? (
+                    <>
+                      <option value="Cliente desiste de la compra.">Cliente desiste de la compra.</option>
+                      <option value="Cliente contrató con otro operador.">Cliente contrató con otro operador.</option>
+                      <option value="Cliente prefiere mantener su operador actual.">Cliente prefiere mantener su operador actual.</option>
+                      <option value="Cliente no tiene interés en este momento.">Cliente no tiene interés en este momento.</option>
+                      <option value="Cliente no responde el seguimiento.">Cliente no responde el seguimiento.</option>
+                      <option value="Cliente solicita volver a contactar más adelante.">Cliente solicita volver a contactar más adelante.</option>
+                      <option value="El cliente solicita una promoción no vigente.">El cliente solicita una promoción no vigente.</option>
+                      <option value="Error en la propuesta enviada.">Error en la propuesta enviada.</option>
+                    </>
                   ) : (
                     <>
                       <option value="Inviable técnicamente">Inviable técnicamente</option>
