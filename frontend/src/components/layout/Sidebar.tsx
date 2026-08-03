@@ -37,7 +37,7 @@ export const Sidebar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Oportunidades', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList },
+        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: false } },
       ];
     }
 
@@ -45,7 +45,7 @@ export const Sidebar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: true } },
+        { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: false } },
         { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
@@ -81,7 +81,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Dashboard', path: isVentas ? '/sales/dashboard' : '/dashboard', icon: BarChart3 },
         { name: isVentas ? 'Kanban B2B' : 'Kanban', path: isVentas ? '/sales/oportunidades' : '/backoffice/oportunidades', icon: LayoutDashboard },
         ...(isVentas ? [
-          { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: true } },
+          { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: false } },
           { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
         ] : [
           { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },

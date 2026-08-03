@@ -35,6 +35,8 @@ export const RegistrarVenta: React.FC = () => {
   useEffect(() => {
     if (location.state?.openForm) {
       setShowForm(true);
+    } else {
+      setShowForm(false);
     }
   }, [location.state]);
 
