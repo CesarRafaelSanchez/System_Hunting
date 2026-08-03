@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, ClipboardCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { opportunitiesService } from '../../services/opportunities.service';
-import { OpportunitySplitView } from './OpportunitySplitView';
+import { OpportunitySplitView as VentasB2BSplitView } from '../opportunities/b2b/B2BSplitView';
+import { OpportunitySplitView as HuntingSplitView } from '../opportunities/hunting/HuntingSplitView';
 import { toast } from 'sonner';
 
 export const ValidacionExpedientes: React.FC = () => {
@@ -167,37 +168,48 @@ export const ValidacionExpedientes: React.FC = () => {
       </div>
 
       {selectedCard && (
-        <OpportunitySplitView 
-          card={selectedCard} 
-          onClose={() => setSelectedCard(null)} 
-          onSave={() => {
-            fetchOpps();
-          }}
-          onApprove={async (towersData) => {
-            const currentStage = selectedCard.stage;
-            let targetCode = '';
-            if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetCode = 'S7';
-            else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetCode = 'S15';
-            
-            if (targetCode !== '') {
-              try {
-                const { opportunitiesService } = await import('../../services/opportunities.service');
-                await opportunitiesService.transitionStage(
-                  String(selectedCard.id), 
-                  targetCode, 
-                  'Aprobación y transición por Validación Back Office', 
-                  true, 
-                  towersData
-                );
-                toast.success('¡Expediente aprobado y enviado a WIN!');
-                fetchOpps();
-              } catch (error) {
-                toast.error('Error de red al aprobar.');
+        (!selectedCard.propertyId || selectedCard.company?.tipoNegocio === 'VENTAS_B2B') ? (
+          <VentasB2BSplitView
+            card={selectedCard}
+            onClose={() => setSelectedCard(null)}
+            onSave={() => {
+              fetchOpps();
+            }}
+            onApprove={() => {}}
+          />
+        ) : (
+          <HuntingSplitView 
+            card={selectedCard} 
+            onClose={() => setSelectedCard(null)} 
+            onSave={() => {
+              fetchOpps();
+            }}
+            onApprove={async (towersData) => {
+              const currentStage = selectedCard.stage;
+              let targetCode = '';
+              if (currentStage === 4 || currentStage === 5 || currentStage === 6) targetCode = 'S7';
+              else if (currentStage === 12 || currentStage === 13 || currentStage === 14) targetCode = 'S15';
+              
+              if (targetCode !== '') {
+                try {
+                  const { opportunitiesService } = await import('../../services/opportunities.service');
+                  await opportunitiesService.transitionStage(
+                    String(selectedCard.id), 
+                    targetCode, 
+                    'Aprobación y transición por Validación Back Office', 
+                    true, 
+                    towersData
+                  );
+                  toast.success('¡Expediente aprobado y enviado a WIN!');
+                  fetchOpps();
+                } catch (error) {
+                  toast.error('Error de red al aprobar.');
+                }
               }
-            }
-            setSelectedCard(null);
-          }}
-        />
+              setSelectedCard(null);
+            }}
+          />
+        )
       )}
     </div>
   );

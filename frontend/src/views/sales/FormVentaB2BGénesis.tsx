@@ -645,8 +645,8 @@ export const FormVentaB2BGénesis: React.FC = () => {
                 </div>
 
                 <div className={`${styles.formGroup} mt-2`}>
-                  <label className={styles.label}>URL Plano / Croquis</label>
-                  <input name="planoUrl" value={formData.planoUrl} onChange={handleChange} className={styles.input} placeholder="Link de plano subido o referencia" />
+                  <label className={styles.label}>Código de Plano / Croquis</label>
+                  <input name="planoUrl" value={formData.planoUrl} onChange={handleChange} className={styles.input} placeholder="Código de plano o croquis" />
                 </div>
 
                 <div className={`${styles.formGroup} mt-2`}>

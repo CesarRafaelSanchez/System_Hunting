@@ -207,6 +207,15 @@ export class VentaFijaService {
     if (!opp) throw new NotFoundException('Oportunidad de Venta no encontrada.');
     if (!opp.ventaFija) throw new BadRequestException('Esta oportunidad no es de tipo VentaFija.');
 
+    // Oportunidad (Opportunity) fields
+    if (dto.companyId !== undefined) {
+      opp.companyId = dto.companyId === '' ? null : dto.companyId;
+    }
+    if (dto.currentOwnerUserId !== undefined) {
+      opp.currentOwnerUserId = dto.currentOwnerUserId === '' ? null : dto.currentOwnerUserId;
+    }
+
+    // VentaFija fields
     if (dto.notasPostventa !== undefined) opp.ventaFija.notasPostventa = dto.notasPostventa;
     if (dto.ruc !== undefined) opp.ventaFija.ruc = dto.ruc;
     if (dto.razonSocial !== undefined) opp.ventaFija.razonSocial = dto.razonSocial;
@@ -228,13 +237,15 @@ export class VentaFijaService {
     if (dto.tipoPlay !== undefined) opp.ventaFija.tipoPlay = dto.tipoPlay;
     if (dto.velocidad !== undefined) opp.ventaFija.velocidad = dto.velocidad;
     if (dto.cargoFijoSinIgv !== undefined) {
-      opp.ventaFija.cargoFijoSinIgv = typeof dto.cargoFijoSinIgv === 'string' ? parseFloat(dto.cargoFijoSinIgv) : dto.cargoFijoSinIgv;
+      const parsed = typeof dto.cargoFijoSinIgv === 'string' ? parseFloat(dto.cargoFijoSinIgv) : dto.cargoFijoSinIgv;
+      opp.ventaFija.cargoFijoSinIgv = (dto.cargoFijoSinIgv === '' || dto.cargoFijoSinIgv === null || Number.isNaN(parsed)) ? null : parsed;
     }
     if (dto.campana !== undefined) opp.ventaFija.campana = dto.campana;
     if (dto.adicionales !== undefined) opp.ventaFija.adicionales = dto.adicionales;
     if (dto.tipoServicio !== undefined) opp.ventaFija.tipoServicio = dto.tipoServicio;
     if (dto.cantidadLineas !== undefined) {
-      opp.ventaFija.cantidadLineas = typeof dto.cantidadLineas === 'string' ? parseInt(dto.cantidadLineas, 10) : dto.cantidadLineas;
+      const parsed = typeof dto.cantidadLineas === 'string' ? parseInt(dto.cantidadLineas, 10) : dto.cantidadLineas;
+      opp.ventaFija.cantidadLineas = (dto.cantidadLineas === '' || dto.cantidadLineas === null || Number.isNaN(parsed)) ? null : parsed;
     }
     if (dto.tipoMovil !== undefined) opp.ventaFija.tipoMovil = dto.tipoMovil;
     if (dto.observaciones !== undefined) opp.ventaFija.observaciones = dto.observaciones;
