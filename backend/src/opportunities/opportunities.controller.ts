@@ -81,4 +81,29 @@ export class OpportunitiesController {
   ) {
     return this.opportunitiesService.getSubmissions(id, req.user);
   }
+
+  @Post(':id/notes')
+  async addNote(
+    @Param('id') id: string,
+    @Body('content') content: string,
+    @Request() req: any
+  ) {
+    return this.opportunitiesService.addNote(id, req.user.id, content);
+  }
+
+  @Get(':id/notes')
+  async getNotes(
+    @Param('id') id: string,
+    @Request() req: any
+  ) {
+    return this.opportunitiesService.getNotes(id, req.user);
+  }
+
+  @Get(':id/history')
+  async getHistory(
+    @Param('id') id: string,
+    @Request() req: any
+  ) {
+    return this.opportunitiesService.getHistory(id, req.user);
+  }
 }

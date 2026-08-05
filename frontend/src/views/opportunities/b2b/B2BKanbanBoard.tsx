@@ -109,11 +109,18 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
             ⭐ High-Ticket
           </span>
         )}
-        {card.currentStageEnteredAt && (new Date().getTime() - new Date(card.currentStageEnteredAt).getTime()) > 10 * 24 * 60 * 60 * 1000 && (
-          <span className="text-[9px] bg-red-100 text-red-700 font-extrabold px-1.5 py-0.5 rounded border border-red-200">
-            ⚠️ Estancado (+10d)
-          </span>
-        )}
+        {(() => {
+          if (!card.currentStageEnteredAt) return null;
+          const timeMs = new Date().getTime() - new Date(card.currentStageEnteredAt).getTime();
+          const d = Math.floor(timeMs / (1000 * 60 * 60 * 24));
+          const h = Math.floor((timeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const isStuck = d >= 5;
+          return (
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${isStuck ? 'bg-red-100 text-red-700 border-red-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+              ⏱️ {d > 0 ? `${d}d ${h}h` : `${h}h`}
+            </span>
+          );
+        })()}
       </div>
 
       <div className="flex justify-between items-center text-xs text-slate-500">
@@ -156,12 +163,59 @@ function SortableCard({ id, card, onClick, isDragDisabled, role, onActionClick, 
 }
 
 // Componente Columna del Kanban
-function KanbanColumn({ stageIndex, title, cards, onCardClick, role, onActionClick, companiesList, onCompanyChange }: any) {
+function KanbanColumn({ stageIndex, title, stageObj, isDraggingActive, cards, onCardClick, role, onActionClick, companiesList, onCompanyChange }: any) {
   const [isVisible, setIsVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const colRef = useRef<HTMLDivElement>(null);
+
+  const checkPermission = (position: number, r: string) => {
+    const isVendedor = r === 'ASESOR_VENTAS' || r === 'HUNTER';
+    const isSupervisor = r === 'SUPERVISOR_VENTAS';
+    const isPostventa = r === 'POSTVENTA';
+    const isBO = r === 'BACKOFFICE' || r === 'BACKOFFICE_VENTAS';
+    const isAdmin = r === 'ACCOUNT_ADMIN' || r === 'ADMIN' || r === 'AGENCY_ADMIN';
+
+    const matrix: Record<number, string[]> = {
+      0: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
+      1: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
+      2: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
+      3: ['BO', 'Admin'],
+      4: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
+      5: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
+      6: ['BO', 'Admin'],
+      7: ['BO', 'Admin'],
+      8: ['BO', 'Admin'],
+      9: ['BO', 'Admin'],
+      10: ['BO', 'Admin'],
+      11: ['BO', 'Admin'],
+      12: ['Supervisor', 'BO', 'Admin'],
+      13: ['BO', 'Admin'],
+      14: ['BO', 'Admin'],
+      15: ['Postventa', 'BO', 'Admin'],
+      16: ['Postventa', 'BO', 'Admin'],
+      17: ['Postventa', 'BO', 'Admin'],
+      18: ['Postventa', 'BO', 'Admin'],
+      19: ['Postventa', 'BO', 'Admin'],
+      20: ['Postventa', 'BO', 'Admin'],
+    };
+
+    const allowedRoles = matrix[position] || [];
+    if (isVendedor && allowedRoles.includes('Vendedor')) return true;
+    if (isSupervisor && allowedRoles.includes('Supervisor')) return true;
+    if (isPostventa && allowedRoles.includes('Postventa')) return true;
+    if (isBO && allowedRoles.includes('BO')) return true;
+    if (isAdmin && allowedRoles.includes('Admin')) return true;
+    return false;
+  };
+
+  let hasPermission = false;
+  if (role === 'HUNTER') {
+    hasPermission = false;
+  } else {
+    hasPermission = checkPermission(stageIndex, role || '');
+  }
   
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `col-${stageIndex}`, data: { stageIndex }, disabled: isCollapsed });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `col-${stageIndex}`, data: { stageIndex }, disabled: isCollapsed || (isDraggingActive && !hasPermission) });
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
@@ -173,32 +227,55 @@ function KanbanColumn({ stageIndex, title, cards, onCardClick, role, onActionCli
   }, []);
 
   const getHeaderStyles = (index: number) => {
-    if ([18, 8].includes(index)) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    if ([2, 9, 19].includes(index)) return 'bg-red-50 text-red-700 border-red-100';
-    if ([5, 10, 13, 17].includes(index)) return 'bg-amber-50 text-amber-700 border-amber-100';
-    if ([6, 7, 14].includes(index)) return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-    return 'bg-blue-50 text-blue-700 border-blue-100';
+    if ([0, 1, 2, 4, 5].includes(index)) return 'bg-blue-50/80 border-t-4 border-blue-500';
+    if ([3, 6, 7, 8, 9, 10, 11, 13, 14].includes(index)) return 'bg-purple-50/80 border-t-4 border-purple-500';
+    if ([12].includes(index)) return 'bg-amber-50/80 border-t-4 border-amber-500';
+    if (index >= 15 && index <= 20) return 'bg-emerald-50/80 border-t-4 border-emerald-500';
+    return 'bg-gray-50/80 border-t-4 border-gray-400';
+  };
+
+  const getDropZoneStyle = () => {
+    if (!isDraggingActive) return 'bg-transparent';
+    if (!hasPermission) return 'opacity-30 cursor-not-allowed bg-slate-100/50';
+    if (isOver) return 'border-2 border-dashed border-emerald-400 bg-emerald-50/50 rounded-xl';
+    return 'border-2 border-dashed border-emerald-300/50 bg-emerald-50/20 rounded-xl';
   };
 
   const headerStyles = getHeaderStyles(stageIndex);
 
   return (
     <div ref={colRef} className={`flex-shrink-0 flex flex-col rounded-xl transition-all duration-300 border-none overflow-hidden ${isCollapsed ? `w-14 h-full ${headerStyles}` : 'w-80 h-full bg-transparent'}`}>
-      <div className={`p-3 flex justify-between items-center sticky top-0 z-10 ${isCollapsed ? 'bg-transparent' : `${headerStyles} rounded-xl mb-3`}`}>
-        {!isCollapsed && <h3 className="font-semibold text-sm truncate pr-2" title={title}>{title}</h3>}
-        
-        <div className={`flex items-center ${isCollapsed ? 'flex-col gap-2 w-full pt-1' : 'gap-2'}`}>
-          <span className="bg-white/60 text-current text-xs font-bold px-2 py-1 rounded-full">{cards.length}</span>
-          <button onClick={() => setIsCollapsed(!isCollapsed)} className="hover:opacity-70 transition-colors p-1 rounded-md" title={isCollapsed ? "Expandir" : "Contraer"}>
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+      <div className={`p-3 flex flex-col gap-2 sticky top-0 z-10 ${isCollapsed ? 'bg-transparent' : `${headerStyles} rounded-xl mb-3 shadow-sm`}`}>
+        <div className="flex justify-between items-center">
+          {!isCollapsed && <h3 className="font-bold text-slate-800 text-sm truncate pr-2" title={title}>{title}</h3>}
+          <div className={`flex items-center ${isCollapsed ? 'flex-col gap-2 w-full pt-1' : 'gap-2'}`}>
+            <span className="px-2.5 py-0.5 rounded-full font-bold bg-white text-slate-700 shadow-sm text-xs">{cards.length}</span>
+            <button onClick={() => setIsCollapsed(!isCollapsed)} className="hover:opacity-70 transition-colors p-1 rounded-md text-slate-500" title={isCollapsed ? "Expandir" : "Contraer"}>
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
+        {!isCollapsed && (
+          <div className="flex flex-col gap-1 items-start mt-1">
+            {hasPermission ? (
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1"><span className="text-[10px]">🔓</span> Permitido</span>
+            ) : (
+              <span className="bg-slate-200 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-300 flex items-center gap-1"><span className="text-[10px]">🔒</span> Solo Lectura</span>
+            )}
+            { (stageObj?.code === 'S7' || stageObj?.code === 'S15') && (
+               <span className="bg-red-50 text-red-600 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> Requiere Validación BO</span>
+            )}
+            { (stageObj?.isLost || title === 'Sin Factibilidad 1') && (
+               <span className="bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> Motivo Obligatorio</span>
+            )}
+          </div>
+        )}
       </div>
       
       {isVisible && !isCollapsed && (
         <div 
           ref={setDropRef} 
-          className={`flex-1 overflow-y-auto transition-colors ${isOver ? 'bg-blue-50/50 rounded-xl' : 'bg-transparent'}`}
+          className={`flex-1 overflow-y-auto transition-colors ${getDropZoneStyle()}`}
         >
           <SortableContext items={cards.map((c: any) => c.id)} strategy={verticalListSortingStrategy}>
             {cards.map((c: any) => (
@@ -603,7 +680,7 @@ export const KanbanBoard: React.FC = () => {
     const originalStage = activeCard.stage;
 
     // Etapa Ganada / Perdida detectada dinámicamente por bandera
-    if (targetStageObj.isWon || targetStageObj.isLost) {
+    if (targetStageObj.isWon || targetStageObj.isLost || targetStageObj.name === 'Sin Factibilidad 1') {
       setClosingCard(activeCard);
       setClosingStageIndex(targetStage);
       return; 
@@ -630,7 +707,7 @@ export const KanbanBoard: React.FC = () => {
     const targetStageObj = activePipeline.stages[closingStageIndex];
     if (!targetStageObj) return;
 
-    if (targetStageObj.isLost && !lostReason) {
+    if ((targetStageObj.isLost || targetStageObj.name === 'Sin Factibilidad 1') && !lostReason) {
       toast.error('Debe ingresar un motivo de caída');
       return;
     }
@@ -1256,6 +1333,8 @@ export const KanbanBoard: React.FC = () => {
                       key={stage.id} 
                       stageIndex={absoluteStageIndex} 
                       title={stage.name} 
+                      stageObj={stage}
+                      isDraggingActive={!!activeCardData}
                       cards={filteredAndSortedCards.filter(c => c.stage === absoluteStageIndex)} 
                       onCardClick={Object.assign(setSelectedCard, { isDragDisabled: user?.role === 'HUNTER' })}
                       role={user?.role}
@@ -1335,7 +1414,7 @@ export const KanbanBoard: React.FC = () => {
             </h2>
             <p className="text-gray-600 mb-6">Estás a punto de cerrar la oportunidad <strong>{closingCard.property?.nombreProyecto || closingCard.title}</strong>.</p>
             
-            {activePipeline.stages[closingStageIndex].isLost && (
+            { (activePipeline.stages[closingStageIndex].isLost || activePipeline.stages[closingStageIndex].name === 'Sin Factibilidad 1') && (
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {activePipeline.stages[closingStageIndex].name === 'Baja de Cliente' ? 'Motivo de Baja (Obligatorio)' : 'Motivo de Caída (Obligatorio)'}
@@ -1353,6 +1432,13 @@ export const KanbanBoard: React.FC = () => {
                       <option value="Se mudó / Cambio de dirección">Se mudó / Cambio de dirección</option>
                       <option value="Cancelación voluntaria">Cancelación voluntaria</option>
                       <option value="Problema técnico recurrente">Problema técnico recurrente</option>
+                      <option value="Otro">Otro</option>
+                    </>
+                  ) : activePipeline.stages[closingStageIndex].name === 'Sin Factibilidad 1' ? (
+                    <>
+                      <option value="Caja saturada">Caja saturada</option>
+                      <option value="Sin cobertura">Sin cobertura</option>
+                      <option value="Fuera de zona">Fuera de zona</option>
                       <option value="Otro">Otro</option>
                     </>
                   ) : activePipeline.stages[closingStageIndex].name === 'Rechazo Oferta' ? (

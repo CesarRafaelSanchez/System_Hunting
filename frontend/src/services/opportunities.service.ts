@@ -41,5 +41,24 @@ export const opportunitiesService = {
       method: 'PATCH',
       body: JSON.stringify({ toStageIdOrCode, reason, isValidatedByBO, towersData }),
     });
+  },
+
+  getNotes: async (id: string) => {
+    return fetchApi(`/opportunities/${id}/notes`, {
+      method: 'GET'
+    });
+  },
+
+  addNote: async (id: string, content: string) => {
+    return fetchApi(`/opportunities/${id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
+  },
+
+  getHistory: async (id: string) => {
+    return fetchApi(`/opportunities/${id}/history`, {
+      method: 'GET'
+    });
   }
 };

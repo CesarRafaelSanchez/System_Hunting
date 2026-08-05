@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, FileText, Building, Edit2, User } from 'lucide-react';
+import { X, CheckCircle, FileText, Building, Edit2, User, MessageSquare, Clock, Send } from 'lucide-react';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { toast } from 'sonner';
+import { opportunitiesService } from '../../../services/opportunities.service';
 import { UBIGEO_PERU } from '../../../utils/ubigeo';
 
 const convertToInputDateFormat = (val: string) => {
@@ -142,6 +143,11 @@ export const OpportunitySplitView: React.FC<{
   const [activeTab, setActiveTab] = useState('basic_info');
   const [companiesList, setCompaniesList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   const { user } = useAuthStore();
   const isBackOfficeOrAdmin = user?.role === 'BACKOFFICE' || user?.role === 'BACKOFFICE_VENTAS' || user?.role === 'POSTVENTA' || user?.role === 'ACCOUNT_ADMIN' || user?.role === 'ADMIN';
@@ -290,6 +296,43 @@ export const OpportunitySplitView: React.FC<{
     }
   }, [isBackOfficeOrAdmin]);
 
+  const loadNotesAndHistory = async () => {
+    try {
+      setIsLoadingNotes(true);
+      setIsLoadingHistory(true);
+      const [fetchedNotes, fetchedHistory] = await Promise.all([
+        opportunitiesService.getNotes(card.id),
+        opportunitiesService.getHistory(card.id)
+      ]);
+      setNotes(fetchedNotes as any[]);
+      setHistory(fetchedHistory as any[]);
+    } catch (e) {
+      console.error('Error loading notes/history', e);
+    } finally {
+      setIsLoadingNotes(false);
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (card.id) {
+      loadNotesAndHistory();
+    }
+  }, [card.id]);
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    try {
+      await opportunitiesService.addNote(card.id, newNote);
+      setNewNote('');
+      const updatedNotes = await opportunitiesService.getNotes(card.id);
+      setNotes(updatedNotes as any[]);
+      toast.success('Nota agregada exitosamente');
+    } catch (e) {
+      toast.error('Error al guardar la nota');
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -355,6 +398,12 @@ export const OpportunitySplitView: React.FC<{
             </button>
             <button className={`px-6 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'b2b_service' ? 'border-blue-900 text-blue-900' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('b2b_service')}>
               DATOS DEL SERVICIO
+            </button>
+            <button className={`px-6 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'notes' ? 'border-blue-900 text-blue-900' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('notes')}>
+              NOTAS Y SEGUIMIENTO
+            </button>
+            <button className={`px-6 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'history' ? 'border-blue-900 text-blue-900' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('history')}>
+              HISTORIAL Y LOGS
             </button>
           </div>
 
@@ -919,6 +968,103 @@ export const OpportunitySplitView: React.FC<{
               </div>
             )}
 
+            {/* Pestaña: NOTAS Y SEGUIMIENTO */}
+            {activeTab === 'notes' && (
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-6">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                  <MessageSquare className="w-5 h-5 text-blue-900" /> Notas y Seguimiento
+                </h4>
+                
+                <div className="flex flex-col gap-3">
+                  <textarea 
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Escribe una nota o actualización sobre esta venta..."
+                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-1 focus:ring-blue-900 outline-none resize-none"
+                    rows={3}
+                  />
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={handleAddNote}
+                      disabled={!newNote.trim()}
+                      className="flex items-center gap-2 bg-blue-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-800 disabled:opacity-50 transition-colors"
+                    >
+                      <Send className="w-4 h-4" /> Agregar Nota
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 mt-6">
+                  {isLoadingNotes ? (
+                    <p className="text-sm text-gray-500 text-center py-4">Cargando notas...</p>
+                  ) : notes.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4 italic">No hay notas registradas.</p>
+                  ) : (
+                    notes.map((n) => (
+                      <div key={n.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex gap-4">
+                        <div className="w-10 h-10 bg-blue-100 text-blue-900 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                          {n.user?.fullName?.substring(0, 2).toUpperCase() || 'US'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-sm text-gray-800">{n.user?.fullName || 'Usuario'}</span>
+                            <span className="text-xs text-gray-500">{new Date(n.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pestaña: HISTORIAL Y LOGS */}
+            {activeTab === 'history' && (
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-6">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                  <Clock className="w-5 h-5 text-blue-900" /> Historial de Movimientos
+                </h4>
+                
+                {isLoadingHistory ? (
+                  <p className="text-sm text-gray-500 text-center py-4">Cargando historial...</p>
+                ) : history.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4 italic">No hay registros en el historial.</p>
+                ) : (
+                  <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 py-4">
+                    {history.map((h) => (
+                      <div key={h.id} className="relative pl-6">
+                        <div className="absolute w-4 h-4 bg-white border-2 border-blue-900 rounded-full -left-[9px] top-1"></div>
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-gray-800">Transición de Etapa</span>
+                              <span className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                <User className="w-3 h-3" /> {h.changedByUser?.fullName || 'Sistema'}
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium text-blue-900 bg-blue-50 px-2 py-1 rounded">
+                              {new Date(h.changedAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm mt-3">
+                            <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium">{h.fromStage?.name || 'Creación'}</span>
+                            <span className="text-gray-400">➔</span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-bold">{h.toStage?.name || 'Desconocido'}</span>
+                          </div>
+                          {h.reason && (
+                            <p className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded border border-red-100">
+                              <span className="font-bold">Motivo:</span> {h.reason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -1033,6 +1179,33 @@ export const OpportunitySplitView: React.FC<{
                   </button>
                 </div>
               )}
+
+              {/* Widget de Métricas de Tiempo SLA */}
+              <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm mt-4">
+                <p className="text-xs font-bold text-gray-700 uppercase mb-3 flex items-center gap-1">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  Métricas de Tiempo
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Fecha de Creación</p>
+                    <p className="text-sm font-medium text-gray-900">{card.createdAt ? new Date(card.createdAt).toLocaleDateString() : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Tiempo en Etapa Actual</p>
+                    <p className="text-sm font-bold text-blue-900">
+                      {(() => {
+                        if (!card.currentStageEnteredAt) return '-';
+                        const timeMs = Date.now() - new Date(card.currentStageEnteredAt).getTime();
+                        const d = Math.floor(timeMs / (1000 * 60 * 60 * 24));
+                        const h = Math.floor((timeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        return d > 0 ? `${d}d ${h}h` : `${h}h`;
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         )}

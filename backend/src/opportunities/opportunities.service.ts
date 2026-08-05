@@ -6,6 +6,7 @@ import { CreateOpportunityDto } from './dto/create-opportunity.dto';
 import { TransitionStageDto } from './dto/transition-stage.dto';
 import { Opportunity } from '../database/entities/opportunity.entity';
 import { OpportunityStageHistory } from '../database/entities/opportunity-stage-history.entity';
+import { OpportunityNote } from '../database/entities/opportunity-note.entity';
 import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { Torre } from '../database/entities/torre.entity';
 import { Piso } from '../database/entities/piso.entity';
@@ -42,6 +43,8 @@ const parseBackendDate = (val: string) => {
 export class OpportunitiesService {
   constructor(
     @InjectRepository(Opportunity) private readonly opportunitiesRepository: Repository<Opportunity>,
+    @InjectRepository(OpportunityNote) private readonly opportunityNotesRepository: Repository<OpportunityNote>,
+    @InjectRepository(OpportunityStageHistory) private readonly historyRepository: Repository<OpportunityStageHistory>,
     @InjectQueue('report-generation') private readonly reportQueue: Queue
   ) {}
   
@@ -73,6 +76,43 @@ export class OpportunitiesService {
         currentOwnerUser: true,
         ventaFija: true,
       }
+    });
+  }
+
+  async getDashboardStats(user: any) {
+    return {
+      activeTowers: 0,
+      totalHomePass: 0,
+      monthlyBuilds: 0,
+      attentionRate: '0%',
+      resolvedIncidents: 0
+    };
+  }
+
+  async getNotes(id: string, user: any) {
+    return this.opportunityNotesRepository.find({
+      where: { opportunityId: id },
+      relations: { user: true },
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  async addNote(id: string, userId: string, content: string) {
+    const opp = await this.opportunitiesRepository.findOne({ where: { id } });
+    if (!opp) throw new NotFoundException('Oportunidad no encontrada');
+    const note = this.opportunityNotesRepository.create({
+      opportunityId: id,
+      userId,
+      content
+    });
+    return this.opportunityNotesRepository.save(note);
+  }
+
+  async getHistory(id: string, user: any) {
+    return this.historyRepository.find({
+      where: { opportunityId: id },
+      relations: { changedByUser: true, fromStage: true, toStage: true },
+      order: { changedAt: 'DESC' }
     });
   }
 

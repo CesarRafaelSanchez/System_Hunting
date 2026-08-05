@@ -8,6 +8,8 @@ import { OpportunityStageHistory } from '../database/entities/opportunity-stage-
 import { Pipeline } from '../database/entities/pipeline.entity';
 import { PipelineStage } from '../database/entities/pipeline-stage.entity';
 import { LeadSource } from '../database/entities/lead-source.entity';
+import { OpportunityNote } from '../database/entities/opportunity-note.entity';
+
 
 @Module({
   imports: [
@@ -16,7 +18,8 @@ import { LeadSource } from '../database/entities/lead-source.entity';
       OpportunityStageHistory,
       Pipeline,
       PipelineStage,
-      LeadSource
+      LeadSource,
+      OpportunityNote
     ]),
     BullModule.registerQueue({
       name: 'report-generation',

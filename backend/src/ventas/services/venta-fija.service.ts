@@ -309,7 +309,7 @@ export class VentaFijaService {
 
     const authMatrix: Record<number, string[]> = {
       0: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
-      1: ['Supervisor', 'BO', 'Admin'],
+      1: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
       2: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
       3: ['BO', 'Admin'],
       4: ['Vendedor', 'Supervisor', 'BO', 'Admin'],
@@ -366,6 +366,7 @@ export class VentaFijaService {
       if (dto.reason) opportunity.motivoCierre = dto.reason;
     } else {
       opportunity.status = 'OPEN';
+      if (dto.reason) opportunity.motivoCierre = dto.reason;
     }
 
     await manager.save(opportunity);
