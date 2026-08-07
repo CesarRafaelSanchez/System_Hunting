@@ -19,6 +19,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { PublicModule } from './public/public.module';
 import { VentasModule } from './ventas/ventas.module';
 import { HuntingModule } from './hunting/hunting.module';
+import { AgencyDashboardModule } from './agency-dashboard/agency-dashboard.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { HuntingModule } from './hunting/hunting.module';
     PublicModule,
     VentasModule,
     HuntingModule,
+    AgencyDashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

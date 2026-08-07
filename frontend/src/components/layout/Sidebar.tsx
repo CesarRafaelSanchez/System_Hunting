@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LayoutDashboard, Clock, ClipboardList, History, ChevronLeft, ChevronRight, Settings, BarChart3, Building2 } from 'lucide-react';
+import { LayoutDashboard, Clock, ClipboardList, ChevronLeft, ChevronRight, BarChart3, Building2 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const { user, activeWorkspace } = useAuthStore();
@@ -46,7 +46,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Kanban', path: '/sales/oportunidades', icon: LayoutDashboard },
         { name: 'Registrar Venta B2B', path: '/sales/oportunidades/nueva', icon: ClipboardList, state: { openForm: false } },
-        { name: 'Historial', path: '/backoffice/historial', icon: History },
+        // { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
 
@@ -54,7 +54,7 @@ export const Sidebar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
         { name: 'Pipeline Postventa', path: '/sales/oportunidades', icon: LayoutDashboard },
-        { name: 'Historial', path: '/backoffice/historial', icon: History },
+        // { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
 
@@ -64,7 +64,7 @@ export const Sidebar: React.FC = () => {
           { name: 'Dashboard', path: '/sales/dashboard', icon: BarChart3 },
           { name: 'Kanban B2B', path: '/sales/oportunidades', icon: LayoutDashboard },
           { name: 'Validación Ventas', path: '/backoffice/auditoria', icon: ClipboardList },
-          { name: 'Historial', path: '/backoffice/historial', icon: History },
+          // { name: 'Historial', path: '/backoffice/historial', icon: History },
         ];
       }
       return [
@@ -72,7 +72,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Kanban', path: '/backoffice/oportunidades', icon: LayoutDashboard },
         { name: 'Validación Expedientes', path: '/backoffice/auditoria', icon: ClipboardList },
         { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
-        { name: 'Historial', path: '/backoffice/historial', icon: History },
+        // { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
 
@@ -88,7 +88,7 @@ export const Sidebar: React.FC = () => {
           { name: 'Control Asistencia', path: '/backoffice/asistencia', icon: Clock },
         ]),
         { name: isVentas ? 'Usuarios y Asesores' : 'Usuarios', path: '/admin/usuarios', icon: ClipboardList },
-        { name: 'Historial', path: '/backoffice/historial', icon: History },
+        // { name: 'Historial', path: '/backoffice/historial', icon: History },
       ];
     }
 
@@ -131,14 +131,14 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="mt-auto relative w-full p-4 border-t border-slate-800">
-        <NavLink
+        {/* <NavLink
           to="/settings"
           title={isCollapsed ? "Configuración" : undefined}
           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-gray-400 hover:bg-gray-800 hover:text-white ${isCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && <span className="font-medium text-[13px] tracking-wide truncate">Configuración</span>}
-        </NavLink>
+        </NavLink> */}
         
         {/* Botón flotante de colapso */}
         <button

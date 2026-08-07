@@ -41,9 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-gray-600 max-w-md mb-6">
             Ocurrió un error inesperado al renderizar esta vista. Por favor, intenta recargar la página.
           </p>
-          <pre className="bg-gray-100 p-4 rounded text-left text-xs text-red-600 max-w-2xl overflow-auto whitespace-pre-wrap">
-            {this.state.error?.toString()}
-          </pre>
+          <div className="bg-gray-100 p-4 rounded text-left text-xs text-red-600 max-w-2xl">
+            Ocurrió un problema interno. Por favor, intenta de nuevo o contacta al administrador.
+          </div>
           <button 
             onClick={() => window.location.reload()}
             className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"

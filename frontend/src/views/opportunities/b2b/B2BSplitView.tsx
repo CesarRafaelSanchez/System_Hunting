@@ -35,18 +35,26 @@ const parseParents = (str: string) => {
 };
 
 const parseBirthPlace = (str: string) => {
-  if (!str) return { dep: 'LIMA', prov: 'LIMA', dist: '', distOtro: '' };
+  if (!str) return { dep: 'LIMA', depOtro: '', prov: 'LIMA', provOtro: '', dist: '', distOtro: '' };
   const parts = str.split(' - ');
-  const dep = parts[0] || 'LIMA';
-  const prov = parts[1] || 'LIMA';
+  const depVal = parts[0] || 'LIMA';
+  const provVal = parts[1] || 'LIMA';
   const distVal = parts[2] || '';
-  const list = UBIGEO_PERU[dep]?.[prov] || [];
-  const isStandard = list.includes(distVal);
+  
+  const isDepStandard = Object.keys(UBIGEO_PERU).includes(depVal);
+  const dep = isDepStandard ? depVal : (depVal ? 'OTRO' : '');
+  const depOtro = isDepStandard ? '' : depVal;
+
+  const isProvStandard = isDepStandard && Object.keys(UBIGEO_PERU[depVal] || {}).includes(provVal);
+  const prov = isProvStandard ? provVal : (provVal ? 'OTRO' : '');
+  const provOtro = isProvStandard ? '' : provVal;
+
+  const isDistStandard = isProvStandard && (UBIGEO_PERU[depVal]?.[provVal] || []).includes(distVal);
+  
   return {
-    dep,
-    prov,
-    dist: isStandard ? distVal : (distVal ? 'OTRO' : ''),
-    distOtro: isStandard ? '' : distVal
+    dep, depOtro, prov, provOtro,
+    dist: isDistStandard ? distVal : (distVal ? 'OTRO' : ''),
+    distOtro: isDistStandard ? '' : distVal
   };
 };
 
@@ -56,7 +64,9 @@ const parseDireccionFiscal = (dir: string) => {
     numeroFiscal: '',
     urbanizacionFiscal: '',
     departamentoFiscal: 'LIMA',
+    departamentoFiscalOtro: '',
     provinciaFiscal: 'LIMA',
+    provinciaFiscalOtro: '',
     distritoFiscal: '',
     distritoFiscalOtro: ''
   };
@@ -85,15 +95,25 @@ const parseDireccionFiscal = (dir: string) => {
           num = viaNum.substring(lastSpaceIdx + 1).trim();
         }
         
-        const isStandard = UBIGEO_PERU[dep]?.[prov]?.includes(dist);
+        const isDepStandard = Object.keys(UBIGEO_PERU).includes(dep);
+        const finalDep = isDepStandard ? dep : (dep ? 'OTRO' : '');
+        const finalDepOtro = isDepStandard ? '' : dep;
+
+        const isProvStandard = isDepStandard && Object.keys(UBIGEO_PERU[dep] || {}).includes(prov);
+        const finalProv = isProvStandard ? prov : (prov ? 'OTRO' : '');
+        const finalProvOtro = isProvStandard ? '' : prov;
+
+        const isDistStandard = isProvStandard && (UBIGEO_PERU[dep]?.[prov] || []).includes(dist);
         return {
           viaFiscal: via,
           numeroFiscal: num,
           urbanizacionFiscal: urb,
-          departamentoFiscal: dep,
-          provinciaFiscal: prov,
-          distritoFiscal: isStandard ? dist : (dist ? 'OTRO' : ''),
-          distritoFiscalOtro: isStandard ? '' : dist
+          departamentoFiscal: finalDep,
+          departamentoFiscalOtro: finalDepOtro,
+          provinciaFiscal: finalProv,
+          provinciaFiscalOtro: finalProvOtro,
+          distritoFiscal: isDistStandard ? dist : (dist ? 'OTRO' : ''),
+          distritoFiscalOtro: isDistStandard ? '' : dist
         };
       }
     }
@@ -190,7 +210,9 @@ export const OpportunitySplitView: React.FC<{
       nombreMadreRrll: parents.madre,
       
       lugarNacimientoDep: birthPlace.dep,
+      lugarNacimientoDepOtro: birthPlace.depOtro,
       lugarNacimientoProv: birthPlace.prov,
+      lugarNacimientoProvOtro: birthPlace.provOtro,
       lugarNacimientoDist: birthPlace.dist,
       lugarNacimientoDistOtro: birthPlace.distOtro,
       
@@ -198,17 +220,21 @@ export const OpportunitySplitView: React.FC<{
       numeroFiscal: fiscalAddr.numeroFiscal,
       urbanizacionFiscal: fiscalAddr.urbanizacionFiscal,
       departamentoFiscal: fiscalAddr.departamentoFiscal,
+      departamentoFiscalOtro: fiscalAddr.departamentoFiscalOtro,
       provinciaFiscal: fiscalAddr.provinciaFiscal,
+      provinciaFiscalOtro: fiscalAddr.provinciaFiscalOtro,
       distritoFiscal: fiscalAddr.distritoFiscal,
       distritoFiscalOtro: fiscalAddr.distritoFiscalOtro,
       
       viaInstalacion: instAddr.viaInstalacion,
       numeroInstalacion: instAddr.numeroInstalacion,
       urbanizacionInstalacion: instAddr.urbanizacionInstalacion,
-      departamento: vf.departamento || 'LIMA',
-      provincia: vf.provincia || 'LIMA',
-      distrito: vf.distrito || '',
-      distritoOtro: '',
+      departamento: Object.keys(UBIGEO_PERU).includes(vf.departamento) ? vf.departamento : (vf.departamento ? 'OTRO' : 'LIMA'),
+      departamentoOtro: Object.keys(UBIGEO_PERU).includes(vf.departamento) ? '' : (vf.departamento || ''),
+      provincia: Object.keys(UBIGEO_PERU[vf.departamento] || {}).includes(vf.provincia) ? vf.provincia : (vf.provincia ? 'OTRO' : 'LIMA'),
+      provinciaOtro: Object.keys(UBIGEO_PERU[vf.departamento] || {}).includes(vf.provincia) ? '' : (vf.provincia || ''),
+      distrito: (UBIGEO_PERU[vf.departamento || 'LIMA']?.[vf.provincia || 'LIMA']?.includes(vf.distrito)) ? vf.distrito : (vf.distrito ? 'OTRO' : ''),
+      distritoOtro: (UBIGEO_PERU[vf.departamento || 'LIMA']?.[vf.provincia || 'LIMA']?.includes(vf.distrito)) ? '' : (vf.distrito || ''),
       direccionFiscal: vf.direccionFiscal || '',
       direccionInstalacion: vf.direccionInstalacion || '',
       nombrePadresRrll: vf.nombrePadresRrll || '',
@@ -251,7 +277,9 @@ export const OpportunitySplitView: React.FC<{
       nombreMadreRrll: parents.madre,
       
       lugarNacimientoDep: birthPlace.dep,
+      lugarNacimientoDepOtro: birthPlace.depOtro,
       lugarNacimientoProv: birthPlace.prov,
+      lugarNacimientoProvOtro: birthPlace.provOtro,
       lugarNacimientoDist: birthPlace.dist,
       lugarNacimientoDistOtro: birthPlace.distOtro,
       
@@ -259,17 +287,21 @@ export const OpportunitySplitView: React.FC<{
       numeroFiscal: fiscalAddr.numeroFiscal,
       urbanizacionFiscal: fiscalAddr.urbanizacionFiscal,
       departamentoFiscal: fiscalAddr.departamentoFiscal,
+      departamentoFiscalOtro: fiscalAddr.departamentoFiscalOtro,
       provinciaFiscal: fiscalAddr.provinciaFiscal,
+      provinciaFiscalOtro: fiscalAddr.provinciaFiscalOtro,
       distritoFiscal: fiscalAddr.distritoFiscal,
       distritoFiscalOtro: fiscalAddr.distritoFiscalOtro,
       
       viaInstalacion: instAddr.viaInstalacion,
       numeroInstalacion: instAddr.numeroInstalacion,
       urbanizacionInstalacion: instAddr.urbanizacionInstalacion,
-      departamento: vf.departamento || 'LIMA',
-      provincia: vf.provincia || 'LIMA',
-      distrito: vf.distrito || '',
-      distritoOtro: (UBIGEO_PERU[vf.departamento || 'LIMA']?.[vf.provincia || 'LIMA']?.includes(vf.distrito) ? '' : vf.distrito) || '',
+      departamento: Object.keys(UBIGEO_PERU).includes(vf.departamento) ? vf.departamento : (vf.departamento ? 'OTRO' : 'LIMA'),
+      departamentoOtro: Object.keys(UBIGEO_PERU).includes(vf.departamento) ? '' : (vf.departamento || ''),
+      provincia: Object.keys(UBIGEO_PERU[vf.departamento] || {}).includes(vf.provincia) ? vf.provincia : (vf.provincia ? 'OTRO' : 'LIMA'),
+      provinciaOtro: Object.keys(UBIGEO_PERU[vf.departamento] || {}).includes(vf.provincia) ? '' : (vf.provincia || ''),
+      distrito: (UBIGEO_PERU[vf.departamento || 'LIMA']?.[vf.provincia || 'LIMA']?.includes(vf.distrito)) ? vf.distrito : (vf.distrito ? 'OTRO' : ''),
+      distritoOtro: (UBIGEO_PERU[vf.departamento || 'LIMA']?.[vf.provincia || 'LIMA']?.includes(vf.distrito)) ? '' : (vf.distrito || ''),
       direccionFiscal: vf.direccionFiscal || '',
       direccionInstalacion: vf.direccionInstalacion || '',
       nombrePadresRrll: vf.nombrePadresRrll || '',
@@ -589,13 +621,17 @@ export const OpportunitySplitView: React.FC<{
                             <div>
                               <label className="block text-[10px] text-gray-500 font-bold uppercase">Dep. Fiscal *</label>
                               <select name="departamentoFiscal" value={formData.departamentoFiscal} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required>
+                                <option value="">Seleccione Departamento</option>
                                 {Object.keys(UBIGEO_PERU).map(d => <option key={d} value={d}>{d}</option>)}
+                                <option value="OTRO">OTRO</option>
                               </select>
                             </div>
                             <div>
                               <label className="block text-[10px] text-gray-500 font-bold uppercase">Prov. Fiscal *</label>
-                              <select name="provinciaFiscal" value={formData.provinciaFiscal} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required>
+                              <select name="provinciaFiscal" value={formData.provinciaFiscal} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required disabled={formData.departamentoFiscal === 'OTRO'}>
+                                <option value="">Seleccione Provincia</option>
                                 {Object.keys(UBIGEO_PERU[formData.departamentoFiscal] || {}).map(p => <option key={p} value={p}>{p}</option>)}
+                                <option value="OTRO">OTRO</option>
                               </select>
                             </div>
                             <div>
@@ -607,7 +643,19 @@ export const OpportunitySplitView: React.FC<{
                               </select>
                             </div>
                           </div>
-                          {formData.distritoFiscal === 'OTRO' && (
+                          {formData.departamentoFiscal === 'OTRO' && (
+                            <div>
+                              <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Departamento Fiscal *</label>
+                              <input name="departamentoFiscalOtro" value={formData.departamentoFiscalOtro} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required />
+                            </div>
+                          )}
+                          {(formData.provinciaFiscal === 'OTRO' || formData.departamentoFiscal === 'OTRO') && (
+                            <div>
+                              <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Provincia Fiscal *</label>
+                              <input name="provinciaFiscalOtro" value={formData.provinciaFiscalOtro} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required />
+                            </div>
+                          )}
+                          {(formData.distritoFiscal === 'OTRO' || formData.provinciaFiscal === 'OTRO' || formData.departamentoFiscal === 'OTRO') && (
                             <div>
                               <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Distrito Fiscal *</label>
                               <input name="distritoFiscalOtro" value={formData.distritoFiscalOtro} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white outline-none" required />
@@ -695,10 +743,14 @@ export const OpportunitySplitView: React.FC<{
                         <div className="mt-1 space-y-2 p-2 bg-gray-50 rounded border border-gray-200">
                           <div className="grid grid-cols-3 gap-1">
                             <select name="lugarNacimientoDep" value={formData.lugarNacimientoDep} onChange={handleChange} className="border text-xs rounded p-1.5 bg-white outline-none" required>
+                              <option value="">Departamento</option>
                               {Object.keys(UBIGEO_PERU).map(d => <option key={d} value={d}>{d}</option>)}
+                              <option value="OTRO">OTRO</option>
                             </select>
-                            <select name="lugarNacimientoProv" value={formData.lugarNacimientoProv} onChange={handleChange} className="border text-xs rounded p-1.5 bg-white outline-none" required>
+                            <select name="lugarNacimientoProv" value={formData.lugarNacimientoProv} onChange={handleChange} className="border text-xs rounded p-1.5 bg-white outline-none" required disabled={formData.lugarNacimientoDep === 'OTRO'}>
+                              <option value="">Provincia</option>
                               {Object.keys(UBIGEO_PERU[formData.lugarNacimientoDep] || {}).map(p => <option key={p} value={p}>{p}</option>)}
+                              <option value="OTRO">OTRO</option>
                             </select>
                             <select name="lugarNacimientoDist" value={formData.lugarNacimientoDist} onChange={handleChange} className="border text-xs rounded p-1.5 bg-white outline-none" required>
                               <option value="">Distrito</option>
@@ -706,8 +758,14 @@ export const OpportunitySplitView: React.FC<{
                               <option value="OTRO">OTRO</option>
                             </select>
                           </div>
-                          {formData.lugarNacimientoDist === 'OTRO' && (
-                            <input name="lugarNacimientoDistOtro" value={formData.lugarNacimientoDistOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none" placeholder="Especificar distrito" required />
+                          {formData.lugarNacimientoDep === 'OTRO' && (
+                            <input name="lugarNacimientoDepOtro" value={formData.lugarNacimientoDepOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none mt-2" placeholder="Especificar departamento" required />
+                          )}
+                          {(formData.lugarNacimientoProv === 'OTRO' || formData.lugarNacimientoDep === 'OTRO') && (
+                            <input name="lugarNacimientoProvOtro" value={formData.lugarNacimientoProvOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none mt-2" placeholder="Especificar provincia" required />
+                          )}
+                          {(formData.lugarNacimientoDist === 'OTRO' || formData.lugarNacimientoProv === 'OTRO' || formData.lugarNacimientoDep === 'OTRO') && (
+                            <input name="lugarNacimientoDistOtro" value={formData.lugarNacimientoDistOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none mt-2" placeholder="Especificar distrito" required />
                           )}
                         </div>
                       ) : (
@@ -751,7 +809,9 @@ export const OpportunitySplitView: React.FC<{
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider font-bold">Departamento *</label>
                         {isEditing ? (
                           <select name="departamento" value={formData.departamento} onChange={handleChange} className="w-full border border-blue-900 rounded px-2.5 py-1.5 text-sm mt-1 bg-white outline-none" required>
+                            <option value="">Seleccione Departamento</option>
                             {Object.keys(UBIGEO_PERU).map(d => <option key={d} value={d}>{d}</option>)}
+                            <option value="OTRO">OTRO</option>
                           </select>
                         ) : (
                           <p className="text-sm font-medium text-gray-900 mt-0.5 uppercase">{getReadonlyValue(formData.departamento)}</p>
@@ -760,8 +820,10 @@ export const OpportunitySplitView: React.FC<{
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider font-bold">Provincia *</label>
                         {isEditing ? (
-                          <select name="provincia" value={formData.provincia} onChange={handleChange} className="w-full border border-blue-900 rounded px-2.5 py-1.5 text-sm mt-1 bg-white outline-none" required>
+                          <select name="provincia" value={formData.provincia} onChange={handleChange} className="w-full border border-blue-900 rounded px-2.5 py-1.5 text-sm mt-1 bg-white outline-none" required disabled={formData.departamento === 'OTRO'}>
+                            <option value="">Seleccione Provincia</option>
                             {Object.keys(UBIGEO_PERU[formData.departamento] || {}).map(p => <option key={p} value={p}>{p}</option>)}
+                            <option value="OTRO">OTRO</option>
                           </select>
                         ) : (
                           <p className="text-sm font-medium text-gray-900 mt-0.5 uppercase">{getReadonlyValue(formData.provincia)}</p>
@@ -781,8 +843,20 @@ export const OpportunitySplitView: React.FC<{
                       </div>
                     </div>
 
-                    {formData.distrito === 'OTRO' && isEditing && (
-                      <div className="col-span-2">
+                    {formData.departamento === 'OTRO' && isEditing && (
+                      <div className="col-span-2 mt-2">
+                        <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Departamento de Instalación *</label>
+                        <input name="departamentoOtro" value={formData.departamentoOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none" required />
+                      </div>
+                    )}
+                    {(formData.provincia === 'OTRO' || formData.departamento === 'OTRO') && isEditing && (
+                      <div className="col-span-2 mt-2">
+                        <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Provincia de Instalación *</label>
+                        <input name="provinciaOtro" value={formData.provinciaOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none" required />
+                      </div>
+                    )}
+                    {(formData.distrito === 'OTRO' || formData.provincia === 'OTRO' || formData.departamento === 'OTRO') && isEditing && (
+                      <div className="col-span-2 mt-2">
                         <label className="block text-[10px] text-gray-500 font-bold uppercase">Especificar Distrito de Instalación *</label>
                         <input name="distritoOtro" value={formData.distritoOtro} onChange={handleChange} className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white outline-none" required />
                       </div>
@@ -1092,8 +1166,16 @@ export const OpportunitySplitView: React.FC<{
                           };
                         } else {
                           const finalDistrito = formData.distrito === 'OTRO' ? formData.distritoOtro : formData.distrito;
+                          const finalProvincia = formData.provincia === 'OTRO' ? formData.provinciaOtro : formData.provincia;
+                          const finalDepartamento = formData.departamento === 'OTRO' ? formData.departamentoOtro : formData.departamento;
+
                           const finalDistritoFiscal = formData.distritoFiscal === 'OTRO' ? formData.distritoFiscalOtro : formData.distritoFiscal;
+                          const finalProvinciaFiscal = formData.provinciaFiscal === 'OTRO' ? formData.provinciaFiscalOtro : formData.provinciaFiscal;
+                          const finalDepartamentoFiscal = formData.departamentoFiscal === 'OTRO' ? formData.departamentoFiscalOtro : formData.departamentoFiscal;
+
                           const finalDistritoNac = formData.lugarNacimientoDist === 'OTRO' ? formData.lugarNacimientoDistOtro : formData.lugarNacimientoDist;
+                          const finalProvinciaNac = formData.lugarNacimientoProv === 'OTRO' ? formData.lugarNacimientoProvOtro : formData.lugarNacimientoProv;
+                          const finalDepartamentoNac = formData.lugarNacimientoDep === 'OTRO' ? formData.lugarNacimientoDepOtro : formData.lugarNacimientoDep;
 
                           payload = {
                             companyId: formData.companyId,
@@ -1105,12 +1187,12 @@ export const OpportunitySplitView: React.FC<{
                             correoElectronico: formData.correoElectronico,
                             nombrePadresRrll: `${formData.nombrePadreRrll} / ${formData.nombreMadreRrll}`,
                             fechaNacimientoRrll: formData.fechaNacimientoRrll,
-                            lugarNacimientoRrll: `${formData.lugarNacimientoDep} - ${formData.lugarNacimientoProv} - ${finalDistritoNac}`,
+                            lugarNacimientoRrll: `${finalDepartamentoNac} - ${finalProvinciaNac} - ${finalDistritoNac}`,
                             tipoDomicilio: formData.tipoDomicilio,
-                            direccionFiscal: `${formData.viaFiscal} ${formData.numeroFiscal}, ${formData.urbanizacionFiscal} - ${finalDistritoFiscal}, ${formData.provinciaFiscal}, ${formData.departamentoFiscal}`,
+                            direccionFiscal: `${formData.viaFiscal} ${formData.numeroFiscal}, ${formData.urbanizacionFiscal} - ${finalDistritoFiscal}, ${finalProvinciaFiscal}, ${finalDepartamentoFiscal}`,
                             direccionInstalacion: `${formData.viaInstalacion} ${formData.numeroInstalacion}, ${formData.urbanizacionInstalacion}`,
-                            departamento: formData.departamento,
-                            provincia: formData.provincia,
+                            departamento: finalDepartamento,
+                            provincia: finalProvincia,
                             distrito: finalDistrito,
                             referencia: formData.referencia,
                             tipoTecnologia: formData.tipoTecnologia,

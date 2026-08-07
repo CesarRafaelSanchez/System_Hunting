@@ -29,7 +29,9 @@ export const FormVentaB2BGénesis: React.FC = () => {
     nombreMadreRrll: '',
     fechaNacimientoRrll: '',
     lugarNacimientoDep: 'LIMA',
+    lugarNacimientoDepOtro: '',
     lugarNacimientoProv: 'LIMA',
+    lugarNacimientoProvOtro: '',
     lugarNacimientoDist: '',
     lugarNacimientoDistOtro: '',
     tipoDomicilio: 'Casa',
@@ -37,14 +39,18 @@ export const FormVentaB2BGénesis: React.FC = () => {
     numeroFiscal: '',
     urbanizacionFiscal: '',
     departamentoFiscal: 'LIMA',
+    departamentoFiscalOtro: '',
     provinciaFiscal: 'LIMA',
+    provinciaFiscalOtro: '',
     distritoFiscal: '',
     distritoFiscalOtro: '',
     viaInstalacion: '',
     numeroInstalacion: '',
     urbanizacionInstalacion: '',
     departamento: 'LIMA',
+    departamentoOtro: '',
     provincia: 'LIMA',
+    provinciaOtro: '',
     distrito: '',
     distritoOtro: '',
     referencia: '',
@@ -116,7 +122,9 @@ export const FormVentaB2BGénesis: React.FC = () => {
       nombreMadreRrll: '',
       fechaNacimientoRrll: '',
       lugarNacimientoDep: 'LIMA',
+      lugarNacimientoDepOtro: '',
       lugarNacimientoProv: 'LIMA',
+      lugarNacimientoProvOtro: '',
       lugarNacimientoDist: '',
       lugarNacimientoDistOtro: '',
       tipoDomicilio: 'Casa',
@@ -124,14 +132,18 @@ export const FormVentaB2BGénesis: React.FC = () => {
       numeroFiscal: '',
       urbanizacionFiscal: '',
       departamentoFiscal: 'LIMA',
+      departamentoFiscalOtro: '',
       provinciaFiscal: 'LIMA',
+      provinciaFiscalOtro: '',
       distritoFiscal: '',
       distritoFiscalOtro: '',
       viaInstalacion: '',
       numeroInstalacion: '',
       urbanizacionInstalacion: '',
       departamento: 'LIMA',
+      departamentoOtro: '',
       provincia: 'LIMA',
+      provinciaOtro: '',
       distrito: '',
       distritoOtro: '',
       referencia: '',
@@ -205,18 +217,27 @@ export const FormVentaB2BGénesis: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Resolver campos compuestos para persistencia en backend
     const finalDistrito = formData.distrito === 'OTRO' ? formData.distritoOtro : formData.distrito;
+    const finalProvincia = formData.provincia === 'OTRO' ? formData.provinciaOtro : formData.provincia;
+    const finalDepartamento = formData.departamento === 'OTRO' ? formData.departamentoOtro : formData.departamento;
+
     const finalDistritoFiscal = formData.distritoFiscal === 'OTRO' ? formData.distritoFiscalOtro : formData.distritoFiscal;
+    const finalProvinciaFiscal = formData.provinciaFiscal === 'OTRO' ? formData.provinciaFiscalOtro : formData.provinciaFiscal;
+    const finalDepartamentoFiscal = formData.departamentoFiscal === 'OTRO' ? formData.departamentoFiscalOtro : formData.departamentoFiscal;
+
     const finalDistritoNac = formData.lugarNacimientoDist === 'OTRO' ? formData.lugarNacimientoDistOtro : formData.lugarNacimientoDist;
+    const finalProvinciaNac = formData.lugarNacimientoProv === 'OTRO' ? formData.lugarNacimientoProvOtro : formData.lugarNacimientoProv;
+    const finalDepartamentoNac = formData.lugarNacimientoDep === 'OTRO' ? formData.lugarNacimientoDepOtro : formData.lugarNacimientoDep;
 
     const formattedPayload = {
       ...formData,
       nombrePadresRrll: `${formData.nombrePadreRrll} / ${formData.nombreMadreRrll}`,
-      lugarNacimientoRrll: `${formData.lugarNacimientoDep} - ${formData.lugarNacimientoProv} - ${finalDistritoNac}`,
-      direccionFiscal: `${formData.viaFiscal} ${formData.numeroFiscal}, ${formData.urbanizacionFiscal} - ${finalDistritoFiscal}, ${formData.provinciaFiscal}, ${formData.departamentoFiscal}`,
+      lugarNacimientoRrll: `${finalDepartamentoNac} - ${finalProvinciaNac} - ${finalDistritoNac}`,
+      direccionFiscal: `${formData.viaFiscal} ${formData.numeroFiscal}, ${formData.urbanizacionFiscal} - ${finalDistritoFiscal}, ${finalProvinciaFiscal}, ${finalDepartamentoFiscal}`,
       direccionInstalacion: `${formData.viaInstalacion} ${formData.numeroInstalacion}, ${formData.urbanizacionInstalacion}`,
       distrito: finalDistrito,
+      provincia: finalProvincia,
+      departamento: finalDepartamento,
     };
 
     try {
@@ -241,7 +262,9 @@ export const FormVentaB2BGénesis: React.FC = () => {
         nombreMadreRrll: '',
         fechaNacimientoRrll: '',
         lugarNacimientoDep: 'LIMA',
+        lugarNacimientoDepOtro: '',
         lugarNacimientoProv: 'LIMA',
+        lugarNacimientoProvOtro: '',
         lugarNacimientoDist: '',
         lugarNacimientoDistOtro: '',
         tipoDomicilio: 'Casa',
@@ -249,14 +272,18 @@ export const FormVentaB2BGénesis: React.FC = () => {
         numeroFiscal: '',
         urbanizacionFiscal: '',
         departamentoFiscal: 'LIMA',
+        departamentoFiscalOtro: '',
         provinciaFiscal: 'LIMA',
+        provinciaFiscalOtro: '',
         distritoFiscal: '',
         distritoFiscalOtro: '',
         viaInstalacion: '',
         numeroInstalacion: '',
         urbanizacionInstalacion: '',
         departamento: 'LIMA',
+        departamentoOtro: '',
         provincia: 'LIMA',
+        provinciaOtro: '',
         distrito: '',
         distritoOtro: '',
         referencia: '',
@@ -405,17 +432,21 @@ export const FormVentaB2BGénesis: React.FC = () => {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Dep. Nacimiento *</label>
                 <select name="lugarNacimientoDep" value={formData.lugarNacimientoDep} onChange={handleChange} className={styles.select} required>
+                  <option value="">Seleccione Departamento</option>
                   {Object.keys(UBIGEO_PERU).map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Prov. Nacimiento *</label>
-                <select name="lugarNacimientoProv" value={formData.lugarNacimientoProv} onChange={handleChange} className={styles.select} required>
+                <select name="lugarNacimientoProv" value={formData.lugarNacimientoProv} onChange={handleChange} className={styles.select} required disabled={formData.lugarNacimientoDep === 'OTRO'}>
+                  <option value="">Seleccione Provincia</option>
                   {Object.keys(UBIGEO_PERU[formData.lugarNacimientoDep] || {}).map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
@@ -430,7 +461,19 @@ export const FormVentaB2BGénesis: React.FC = () => {
               </div>
             </div>
 
-            {formData.lugarNacimientoDist === 'OTRO' && (
+            {formData.lugarNacimientoDep === 'OTRO' && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Departamento de Nacimiento *</label>
+                <input name="lugarNacimientoDepOtro" value={formData.lugarNacimientoDepOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el departamento" />
+              </div>
+            )}
+            {(formData.lugarNacimientoProv === 'OTRO' || formData.lugarNacimientoDep === 'OTRO') && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Provincia de Nacimiento *</label>
+                <input name="lugarNacimientoProvOtro" value={formData.lugarNacimientoProvOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba la provincia" />
+              </div>
+            )}
+            {(formData.lugarNacimientoDist === 'OTRO' || formData.lugarNacimientoProv === 'OTRO' || formData.lugarNacimientoDep === 'OTRO') && (
               <div className={`${styles.formGroup} mt-2`}>
                 <label className={styles.label}>Especificar Distrito de Nacimiento *</label>
                 <input name="lugarNacimientoDistOtro" value={formData.lugarNacimientoDistOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el nombre del distrito" />
@@ -468,17 +511,21 @@ export const FormVentaB2BGénesis: React.FC = () => {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Dep. Fiscal *</label>
                 <select name="departamentoFiscal" value={formData.departamentoFiscal} onChange={handleChange} className={styles.select} required>
+                  <option value="">Seleccione Departamento</option>
                   {Object.keys(UBIGEO_PERU).map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Prov. Fiscal *</label>
-                <select name="provinciaFiscal" value={formData.provinciaFiscal} onChange={handleChange} className={styles.select} required>
+                <select name="provinciaFiscal" value={formData.provinciaFiscal} onChange={handleChange} className={styles.select} required disabled={formData.departamentoFiscal === 'OTRO'}>
+                  <option value="">Seleccione Provincia</option>
                   {Object.keys(UBIGEO_PERU[formData.departamentoFiscal] || {}).map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
@@ -493,7 +540,19 @@ export const FormVentaB2BGénesis: React.FC = () => {
               </div>
             </div>
 
-            {formData.distritoFiscal === 'OTRO' && (
+            {formData.departamentoFiscal === 'OTRO' && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Departamento Fiscal *</label>
+                <input name="departamentoFiscalOtro" value={formData.departamentoFiscalOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el departamento fiscal" />
+              </div>
+            )}
+            {(formData.provinciaFiscal === 'OTRO' || formData.departamentoFiscal === 'OTRO') && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Provincia Fiscal *</label>
+                <input name="provinciaFiscalOtro" value={formData.provinciaFiscalOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba la provincia fiscal" />
+              </div>
+            )}
+            {(formData.distritoFiscal === 'OTRO' || formData.provinciaFiscal === 'OTRO' || formData.departamentoFiscal === 'OTRO') && (
               <div className={`${styles.formGroup} mt-2`}>
                 <label className={styles.label}>Especificar Distrito Fiscal *</label>
                 <input name="distritoFiscalOtro" value={formData.distritoFiscalOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el nombre del distrito" />
@@ -511,17 +570,21 @@ export const FormVentaB2BGénesis: React.FC = () => {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Dep. Instalación *</label>
                 <select name="departamento" value={formData.departamento} onChange={handleChange} className={styles.select} required>
+                  <option value="">Seleccione Departamento</option>
                   {Object.keys(UBIGEO_PERU).map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Prov. Instalación *</label>
-                <select name="provincia" value={formData.provincia} onChange={handleChange} className={styles.select} required>
+                <select name="provincia" value={formData.provincia} onChange={handleChange} className={styles.select} required disabled={formData.departamento === 'OTRO'}>
+                  <option value="">Seleccione Provincia</option>
                   {Object.keys(UBIGEO_PERU[formData.departamento] || {}).map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
+                  <option value="OTRO">OTRO (INGRESAR MANUAL)</option>
                 </select>
               </div>
               <div className={styles.formGroup}>
@@ -536,7 +599,19 @@ export const FormVentaB2BGénesis: React.FC = () => {
               </div>
             </div>
 
-            {formData.distrito === 'OTRO' && (
+            {formData.departamento === 'OTRO' && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Departamento de Instalación *</label>
+                <input name="departamentoOtro" value={formData.departamentoOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el departamento" />
+              </div>
+            )}
+            {(formData.provincia === 'OTRO' || formData.departamento === 'OTRO') && (
+              <div className={`${styles.formGroup} mt-2`}>
+                <label className={styles.label}>Especificar Provincia de Instalación *</label>
+                <input name="provinciaOtro" value={formData.provinciaOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba la provincia" />
+              </div>
+            )}
+            {(formData.distrito === 'OTRO' || formData.provincia === 'OTRO' || formData.departamento === 'OTRO') && (
               <div className={`${styles.formGroup} mt-2`}>
                 <label className={styles.label}>Especificar Distrito de Instalación *</label>
                 <input name="distritoOtro" value={formData.distritoOtro} onChange={handleChange} className={styles.input} required placeholder="Escriba el nombre del distrito" />

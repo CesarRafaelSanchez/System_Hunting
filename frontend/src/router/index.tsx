@@ -72,6 +72,7 @@ const DashboardView = React.lazy(() => import('../views/dashboard/DashboardView'
 const ValidacionExpedientes = React.lazy(() => import('../views/backoffice/ValidacionExpedientes').then(m => ({ default: m.ValidacionExpedientes })));
 import { SyncManager } from '../components/SyncManager';
 const AgencyDashboard = React.lazy(() => import('../views/admin/AgencyDashboard').then(m => ({ default: m.AgencyDashboard })));
+const NotFoundView = React.lazy(() => import('../views/NotFoundView').then(m => ({ default: m.NotFoundView })));
 
 // --- GUARDS DE RUTAS ---
 
@@ -120,8 +121,10 @@ const ProtectedRoute = ({ children, allowedRoles, bypassWorkspaceCheck }: { chil
       if (user.role === 'ASESOR_VENTAS' || user.role === 'SUPERVISOR_VENTAS' || user.role === 'BACKOFFICE_VENTAS' || user.role === 'POSTVENTA') return <Navigate to="/sales/dashboard" replace />;
       if (['BACKOFFICE', 'SUPERVISOR_HUNTING'].includes(user.role)) return <Navigate to="/backoffice/oportunidades" replace />;
       if (isLocalAdmin) return <Navigate to="/admin" replace />;
-      logout();
-      return <Navigate to="/login" replace />;
+      
+      // En lugar de hacer logout(), redirigimos a una ruta segura según su rol,
+      // y si el rol no coincide con nada, redirigimos al fallback 404/Home
+      return <Navigate to="/" replace />;
     }
   }
 
@@ -320,7 +323,11 @@ export const AppRouter = () => {
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={
+          <Suspense fallback={<div className="p-8 flex justify-center text-gray-500">Cargando...</div>}>
+            <NotFoundView />
+          </Suspense>
+        } />
       </Routes>
       </ErrorBoundary>
     </BrowserRouter>
